@@ -7,7 +7,9 @@ import { PIXEL_CONFIG, type PlanId } from '@/config/pixels';
 declare global {
   interface Window {
     fbq: any;
+    utmify: any;
     testFacebookPixel?: () => void;
+    testUTMify?: () => void;
   }
 }
 
@@ -18,23 +20,35 @@ export default function PixelManager() {
     if (initializationRef.current) return;
     initializationRef.current = true;
 
-    console.log('🎯 [PIXEL MANAGER] Inicializando Facebook Pixel');
+    console.log('🎯 [PIXEL MANAGER] Inicializando Facebook Pixel e UTMify');
 
-    // Adicionar função de teste global
+    // Adicionar funções de teste globais
     if (typeof window !== 'undefined') {
       window.testFacebookPixel = () => {
         if (window.fbq) {
           console.log('✅ Facebook Pixel está disponível');
           window.fbq('track', 'Lead', {
-            content_name: 'Teste Manual'
+            content_name: 'Teste Manual Facebook'
           });
-          console.log('🎯 Evento de teste Lead enviado');
+          console.log('🎯 Evento de teste Lead enviado para Facebook');
         } else {
           console.log('❌ Facebook Pixel não está disponível');
         }
       };
+
+      window.testUTMify = () => {
+        if (window.utmify) {
+          console.log('✅ UTMify está disponível');
+          window.utmify('track', 'teste_manual', {
+            content_name: 'Teste Manual UTMify'
+          });
+          console.log('🎯 Evento de teste enviado para UTMify');
+        } else {
+          console.log('❌ UTMify não está disponível');
+        }
+      };
       
-      console.log('💡 Digite window.testFacebookPixel() no console para testar');
+      console.log('💡 Digite window.testFacebookPixel() ou window.testUTMify() no console para testar');
     }
   }, []);
 
@@ -63,7 +77,27 @@ export default function PixelManager() {
         }}
       />
 
-      {/* NoScript fallback */}
+      {/* UTMify Script */}
+      <Script
+        id="utmify-pixel"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function(u,t,m,i,f,y){u[i]=u[i]||function(){
+            (u[i].q=u[i].q||[]).push(arguments)};f=t.createElement(m);
+            f.async=1;f.src='https://cdn.utmify.com.br/scripts/utmify.js';
+            y=t.getElementsByTagName(m)[0];y.parentNode.insertBefore(f,y);
+            })(window,document,'script','utmify');
+            
+            utmify('init', '${PIXEL_CONFIG.UTMIFY_PIXEL_ID}');
+            utmify('track', 'page_view');
+            
+            console.log('✅ UTMify inicializado - ID: ${PIXEL_CONFIG.UTMIFY_PIXEL_ID}');
+          `,
+        }}
+      />
+
+      {/* NoScript fallback para Facebook */}
       <noscript>
         <img 
           height="1" 
@@ -81,64 +115,93 @@ export default function PixelManager() {
  * Tracking do Hero CTA
  */
 export const trackHeroCTA = () => {
-  if (typeof window === 'undefined' || !window.fbq) {
-    console.log('❌ Facebook Pixel não disponível');
-    return;
+  console.log('🎯 Disparando evento Lead para Hero CTA');
+  
+  // Facebook Pixel
+  if (typeof window !== 'undefined' && window.fbq) {
+    window.fbq('track', 'Lead', {
+      content_name: 'Hero CTA Click'
+    });
+    console.log('✅ Evento Lead enviado para Facebook');
   }
   
-  console.log('🎯 Disparando evento Lead');
-  
-  window.fbq('track', 'Lead', {
-    content_name: 'Hero CTA Click'
-  });
-  
-  console.log('✅ Evento Lead enviado');
+  // UTMify
+  if (typeof window !== 'undefined' && window.utmify) {
+    window.utmify('track', 'hero_cta_click', {
+      content_name: 'Hero CTA Click'
+    });
+    console.log('✅ Evento hero_cta_click enviado para UTMify');
+  }
 };
 
 /**
  * Tracking de seção
  */
 export const trackSectionView = (sectionName: string) => {
-  if (typeof window === 'undefined' || !window.fbq) return;
+  if (typeof window === 'undefined') return;
   
   console.log(`🎯 Disparando ViewContent para ${sectionName}`);
   
-  window.fbq('track', 'ViewContent', {
-    content_name: sectionName
-  });
+  // Facebook Pixel
+  if (window.fbq) {
+    window.fbq('track', 'ViewContent', {
+      content_name: sectionName
+    });
+    console.log(`✅ ViewContent enviado para Facebook - ${sectionName}`);
+  }
   
-  console.log(`✅ ViewContent enviado para ${sectionName}`);
+  // UTMify
+  if (window.utmify) {
+    window.utmify('track', 'section_view', {
+      section_name: sectionName
+    });
+    console.log(`✅ section_view enviado para UTMify - ${sectionName}`);
+  }
 };
 
 /**
  * Tracking de checkout
  */
 export const trackPlanCheckout = (planId: PlanId, planName: string, planValue: number) => {
-  if (typeof window === 'undefined' || !window.fbq) {
-    console.log('❌ Facebook Pixel não disponível');
-    return;
-  }
+  if (typeof window === 'undefined') return;
 
   console.log(`🎯 Disparando InitiateCheckout para ${planName}`);
 
-  // Evento padrão
-  window.fbq('track', 'InitiateCheckout', {
-    content_name: planName,
-    value: planValue,
-    currency: 'BRL'
-  });
-  
-  console.log('✅ InitiateCheckout enviado');
-
-  // Evento customizado
-  const planConfig = PIXEL_CONFIG.PLAN_EVENTS[planId];
-  if (planConfig) {
-    window.fbq('trackCustom', planConfig.facebook_event, {
-      plan_name: planName,
-      plan_value: planValue
+  // Facebook Pixel
+  if (window.fbq) {
+    // Evento padrão
+    window.fbq('track', 'InitiateCheckout', {
+      content_name: planName,
+      value: planValue,
+      currency: 'BRL'
     });
     
-    console.log(`✅ Evento customizado ${planConfig.facebook_event} enviado`);
+    console.log('✅ InitiateCheckout enviado para Facebook');
+
+    // Evento customizado
+    const planConfig = PIXEL_CONFIG.PLAN_EVENTS[planId];
+    if (planConfig) {
+      window.fbq('trackCustom', planConfig.facebook_event, {
+        plan_name: planName,
+        plan_value: planValue
+      });
+      
+      console.log(`✅ Evento customizado ${planConfig.facebook_event} enviado para Facebook`);
+    }
+  }
+
+  // UTMify
+  if (window.utmify) {
+    const planConfig = PIXEL_CONFIG.PLAN_EVENTS[planId];
+    if (planConfig) {
+      window.utmify('track', planConfig.utmify_event, {
+        plan_name: planName,
+        plan_value: planValue,
+        currency: 'BRL'
+      });
+      
+      console.log(`✅ Evento ${planConfig.utmify_event} enviado para UTMify`);
+    }
   }
 };
 
@@ -146,18 +209,33 @@ export const trackPlanCheckout = (planId: PlanId, planName: string, planValue: n
  * Tracking de visualização de plano
  */
 export const trackPlanView = (planId: PlanId) => {
-  if (typeof window === 'undefined' || !window.fbq) return;
+  if (typeof window === 'undefined') return;
   
   const planData = PIXEL_CONFIG.PLAN_EVENTS[planId];
   if (!planData) return;
   
   console.log(`🎯 Disparando ViewContent para plano ${planId}`);
   
-  window.fbq('track', 'ViewContent', {
-    content_name: planData.plan_name,
-    value: planData.plan_price,
-    currency: 'BRL'
-  });
+  // Facebook Pixel
+  if (window.fbq) {
+    window.fbq('track', 'ViewContent', {
+      content_name: planData.plan_name,
+      value: planData.plan_price,
+      currency: 'BRL'
+    });
+    
+    console.log(`✅ ViewContent enviado para Facebook - ${planId}`);
+  }
   
-  console.log(`✅ ViewContent enviado para ${planId}`);
+  // UTMify
+  if (window.utmify) {
+    window.utmify('track', 'plan_view', {
+      plan_id: planId,
+      plan_name: planData.plan_name,
+      plan_value: planData.plan_price,
+      currency: 'BRL'
+    });
+    
+    console.log(`✅ plan_view enviado para UTMify - ${planId}`);
+  }
 }; 

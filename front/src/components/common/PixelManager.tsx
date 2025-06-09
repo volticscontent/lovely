@@ -54,6 +54,16 @@ export default function PixelManager() {
 
   return (
     <>
+      {/* UTMify Script de UTMs - Para capturar parâmetros do Facebook Ads */}
+      <Script
+        src="https://cdn.utmify.com.br/scripts/utms/latest.js"
+        data-utmify-prevent-xcod-sck=""
+        data-utmify-prevent-subids=""
+        strategy="beforeInteractive"
+        async
+        defer
+      />
+
       {/* Facebook Pixel - Configuração limpa */}
       <Script
         id="facebook-pixel"
@@ -77,7 +87,7 @@ export default function PixelManager() {
         }}
       />
 
-      {/* UTMify Script */}
+      {/* UTMify Script de Tracking */}
       <Script
         id="utmify-pixel"
         strategy="afterInteractive"
@@ -93,6 +103,7 @@ export default function PixelManager() {
             utmify('track', 'page_view');
             
             console.log('✅ UTMify inicializado - ID: ${PIXEL_CONFIG.UTMIFY_PIXEL_ID}');
+            console.log('✅ UTMify UTMs script carregado para capturar parâmetros do Facebook Ads');
           `,
         }}
       />

@@ -40,8 +40,8 @@ export const trackComoFuncionaCTA = (gameMode: string) => {
     });
   }
 
-  // UTMify - TEMPORARIAMENTE DESABILITADO
-  /*
+
+  
   if (typeof window !== 'undefined' && window.utmify) {
     window.utmify.track('ComoFunciona_GameModeClick', {
       section: 'como_funciona',
@@ -50,7 +50,7 @@ export const trackComoFuncionaCTA = (gameMode: string) => {
       value: 0
     });
   }
-  */
+
 };
 
 export const trackPresenteCTA = (buttonType: 'dar_presente' | 'ver_planos') => {
@@ -72,8 +72,6 @@ export const trackPresenteCTA = (buttonType: 'dar_presente' | 'ver_planos') => {
     });
   }
 
-  // UTMify - TEMPORARIAMENTE DESABILITADO
-  /*
   if (typeof window !== 'undefined' && window.utmify) {
     window.utmify.track(eventName, {
       section: 'presente',
@@ -83,7 +81,7 @@ export const trackPresenteCTA = (buttonType: 'dar_presente' | 'ver_planos') => {
       value: 0
     });
   }
-  */
+  
 };
 
 export const trackDesafiosCTA = () => {
@@ -96,8 +94,7 @@ export const trackDesafiosCTA = () => {
     });
   }
 
-  // UTMify - TEMPORARIAMENTE DESABILITADO
-  /*
+
   if (typeof window !== 'undefined' && window.utmify) {
     window.utmify.track('DesafiosSection_VerPlanos', {
       section: 'desafios',
@@ -106,5 +103,5 @@ export const trackDesafiosCTA = () => {
       value: 0
     });
   }
-  */
+ 
 }; 

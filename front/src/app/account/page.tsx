@@ -17,16 +17,16 @@ const maskData = (data: string | undefined, type: 'email') => {
 };
 
 export default function AccountPage() {
-  const { user, loading, signOut } = useAuth();
+  const { user, isLoading, signOut } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!isLoading && !user) {
       router.push('/auth');
     }
-  }, [user, loading, router]);
+  }, [user, isLoading, router]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-black">
         <div className="flex flex-col items-center">

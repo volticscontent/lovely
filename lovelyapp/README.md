@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 💕 LovelyApp - Plataforma de Jogos para Casais
 
-## Getting Started
+Plataforma simplificada de jogos íntimos para casais.
 
-First, run the development server:
+## 🚀 Tecnologias
+
+- **Next.js 15** - Framework React
+- **TypeScript** - Tipagem estática  
+- **Tailwind CSS** - Estilização
+- **Backend** - Node.js + Express + SQLite
+
+## 🛠️ Setup Rápido
 
 ```bash
+# Frontend (porta 3001)
+cd lovelyapp
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Backend (porta 3333)
+cd backend
+npm install
+npm run db:push
+npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🌐 Acesso
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Frontend**: http://localhost:3001
+- **Backend**: http://localhost:3333
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🎮 Funcionalidades
 
-## Learn More
+- Dashboard personalizado
+- 3 jogos básicos:
+  - Verdade ou Desafio
+  - Perguntas Íntimas  
+  - Desafios Românticos
+- Perfil do casal
+- Sistema de autenticação
 
-To learn more about Next.js, take a look at the following resources:
+## 📊 Dados do Usuário
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Backend fornece:
+```json
+{
+  "user": {
+    "id": "uuid",
+    "email": "email@exemplo.com", 
+    "name": "Nome do Usuário"
+  },
+  "profile": {
+    "partnerName": "Nome do Parceiro",
+    "moodToday": "PLAYFUL",
+    "darinessLevel": 5
+  }
+}
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Endpoints:
+- `POST /api/auth/login` - Login
+- `GET /api/auth/validate` - Validar token
+- `GET /api/profile` - Buscar perfil
+- `PUT /api/profile` - Atualizar perfil
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Plataforma simplificada para desenvolvimento rápido** 💚

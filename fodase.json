@@ -1,0 +1,809 @@
+Nome do parâmetro
+Descrição
+Formato e tamanho
+token	Token para identificar o postback recebido pela PerfectPay	String(32)
+code	Código identificador da venda	String(255)
+sale_amount	Valor da venda ( valor do plano + frete)	Decimal(8,2) Ex: 226.9
+currency_enum	Origem da moeda utilizada na compra	
+Small Integer
+Possíveis valores:
+1 => BRL
+coupon_code	Identificador do cupom utilizado	String(255)
+installments	Número de parcelas	Integer(4)
+installment_amount	Valor da parcela	Decimal(8,2)
+shipping_type_enum	Status do frete	
+Small Integer
+Possíveis valores:
+1 => frete grátis,
+2 => frete fixo
+shipping_amount	Valor do frete	Decimal(8,2)
+payment_method_enum	Método de pagamento	
+Número até 4 dígitos
+
+Possíveis valores:
+
+0 => 'none',
+1 => 'visa',
+2 => 'bolbradesco',
+3 => 'amex',
+4 => 'elo',
+5 => 'hipercard',
+6 => 'master',
+7 => 'melicard',
+8 => 'free_price',
+payment_type_enum	Tipo de pagamento	
+Small integer
+
+Possíveis valores:
+
+0 => 'none',
+1 => 'credit_card',
+2 => 'ticket', // boleto bancário
+3 => 'paypal',
+4 => 'credit_card_recurrent',
+5 => 'free_price',
+6 => 'credit_card_upsell',
+billet_url	URL do boleto	String(255)
+billet_number	Linha digitável do boleto	String(255)
+billet_expiration	Data de expiração do boleto	DateTime
+quantity	Quantidade produtos	Integer(4)
+sale_status_enum	Status da venda	
+Small Integer
+
+Possíveis valores:
+
+0 => 'none',
+1 => 'pending', // boleto pendente
+2 => 'approved', // venda aprovada boleto ou cartão
+3 => 'in_process', // em revisão manual
+4 => 'in_mediation', // em moderação
+5 => 'rejected', // rejeitado
+6 => 'cancelled', // cancelado do cartão
+7 => 'refunded', // devolvido
+8 => 'authorized', // autorizada
+9 => 'charged_back', // solicitado charge back
+10 => 'completed', // 30 dias após a venda aprovada
+11 => 'checkout_error', // erro durante checkout
+12 => 'precheckout', // abandono
+13 => 'expired', // boleto expirado
+16 => 'in_review', // em análise
+sale_status_detail	Detalhe do status da venda.	String(255)
+date_created	Data do pedido	
+DateTime
+
+Ex: 2019-04-10 18:50:56
+
+date_approved	Data de aprovação	
+DateTime
+
+Ex: 2019-04-10 18:50:56
+
+product
+
+->code
+
+Código identificador do produto	String(255)
+product
+
+->name
+
+Nome do produto que foi adquirido	String(255)
+product
+
+->external_reference
+
+Código externo do produto para uso em plataformas externas	String(255)
+product
+
+->garantee
+
+Garantia do produto	Integer(4)
+plan
+
+->code
+
+Código identificador do plano	String(255)
+plan
+
+->name
+
+Nome do plano adquirido	String(50)
+plan
+
+->quantity
+
+Quantidade adquirida	Integer(11)
+plan_itens	Quando possuem itens adicionais entregues ao produto	array()
+customer
+
+->customer_type_enum
+
+Tipo pessoa física ou Jurídica	
+Integer(4)
+
+Possíveis valores:
+
+1 => 'physics',
+2 => 'juridical',
+customer
+
+->full_name
+
+Nome completo do comprador	String(255)
+customer
+
+->email
+
+E-mail do comprador	String(255)
+customer
+
+->identification_type
+
+Tipo de documentom que varia de acordo com a nacionalidade e natureza jurídica do comprador	
+String(20)
+
+Ex: CPF ou CNPJ para compradores brasileiros.
+
+customer
+
+->identification_number
+
+CPF ou CNPJ usado do comprador	String(45)
+customer
+
+->birthday
+
+Data de Nascimento do comprador	Date
+customer
+
+->phone_area_code
+
+Código área do telefone do comprador	String(15)
+customer
+
+->phone_number
+
+Número telefone do comprador	String(15)
+customer
+
+->country
+
+País do comprador	String(20)
+customer
+
+->state
+
+Estado do comprador	String(45)
+customer
+
+->city
+
+Cidade do comprador	String(255)
+customer
+
+->zip_code
+
+Código Postal do comprador	String(50)
+customer
+
+->street_name
+
+Endereço do comprador	String(255)
+customer
+
+->street_number
+
+Número endereço do comprador	String(50)
+customer
+
+->complement
+
+Complemento do endereço do comprador	String(100)
+customer
+
+->district
+
+Cidade do comprador	String(100)
+metadata
+
+->src
+
+Identificador customizado pelo usuário	String(100)
+metadata
+
+->utm_source
+
+Identificador customizado pelo usuário	String(100)
+metadata
+
+->utm_medium
+
+Identificador customizado pelo usuário	String(100)
+metadata
+
+->utm_campaign
+
+Identificador customizado pelo usuário	String(10)
+metadata
+
+->utm_term
+
+Identificador customizado pelo usuário	String(100)
+metadata
+
+->utm_content
+
+Identificador customizado pelo usuário	String(100)
+metadata
+
+->utm_perfect
+
+Identificador customizado pelo usuário	String(100)
+webhook_owner	Code do usuário que configurou para receber esse Webhook	String(100)
+commission	Podem existir n comissões para cada venda	array()
+commission
+
+->affiliation_code
+
+Código do Afiliado	String(100)
+commission
+
+->affiliation_type_enum
+
+Tipo de afiliação	
+Small Integer
+
+Possíveis valores:
+
+0 => 'platform',//'Plataforma',
+1 => 'producer',//'Produtor',
+2 => 'co_producer',//'Co-Produtor',
+3 => 'affiliate_management',//'Gerente de Afiliados',
+4 => 'partner',//'Parceiro',
+5 => 'affiliate',//'Afiliado',
+6 => 'premium', // 'Prêmio'
+7 => 'provider', // 'Fornecedor'
+commission
+
+->name
+
+Nome do afiliado	String(255)
+commission
+
+->email
+
+E-mail do Afiliado	String(255)
+commission
+
+->identification_number
+
+CPF ou CNPJ do afiliado	String(100)
+commission
+
+->commission_amount
+
+Código do Afiliado	String(100)
+marketplaces	Podem existir n marketplaces para cada venda	array()
+marketplaces
+
+->{code}
+
+->name
+
+{code} - código referente ao marketplace atrelado
+
+String(100)
+marketplaces
+
+->{code}
+
+->itens
+
+Valor total cobrado referente a quantidade de itens vendidos
+
+Ex. Venda de encapsulados, tem um valor específico para cada pote vendido, esse valor já vem calculado quantidade de itens no plano vendido x valor por item cobrado pelo marketplace. 
+
+double(8,2)
+marketplaces
+
+->{code}
+
+->sale
+
+Valor total cobrado referente ao pedido
+
+Ex. Venda de encapsulados, tem um valor específico para cada pedido. Se for configurado R$25 por pedido para custo de envio, será cobrado R$25 por pedido.
+
+double(8,2)
+{
+  "token"               : "7378fa24f96b38a3b1805d7a6887bc82",
+  "code"                : "PPCPMTB58MNF4E",
+  "sale_amount"         : 385,
+  "currency_enum"       : 1,
+  "coupon_code"         : null,
+  "installments"        : 12,
+  "installment_amount"  : null,
+  "shipping_type_enum"  : 1,
+  "shipping_amount"     : null,
+  "payment_method_enum" : 4,
+  "payment_type_enum"   : 1,
+  "billet_url"          : "",
+  "billet_number"       : null,
+  "billet_expiration"   : null,
+  "quantity"            : 5,
+  "sale_status_enum"    : 0,
+  "sale_status_detail"  : "checkout_saved",
+  "date_created"        : "2019-03-09 08:24:02",
+  "date_approved"       : null,
+  "product"             : {
+    "code"              : "PPPB3A07",
+    "name"              : "Herus Caps",
+    "external_reference": "42433",
+    "guarantee"         : 30
+  },
+  "plan"                : {
+    "code"    : "PPLQQ9Q9R",
+    "name"    : "Herus Caps | 3 potes + 2 potes gratis",
+    "quantity": 5
+  },
+  "plan_itens"          : [],
+  "customer"            : {
+    "customer_type_enum"   : 1,
+    "full_name"            : "USER EXAMPLE",
+    "email"                : "user_example2019@hotmail89254",
+    "identification_type"  : "CPF",
+    "identification_number": "57856874587",
+    "birthday"             : "2020-08-28",
+    "phone_area_code"      : "47",
+    "phone_number"         : "9965568558",
+    "street_name"          : "Rua Example Street",
+    "street_number"        : "54",
+    "district"             : "Example",
+    "complement"           : "",
+    "zip_code"             : "65875-564",
+    "city"                 : "Example City",
+    "state"                : "RJ",
+    "country"              : "BR"
+  },
+  "metadata"            : {
+    "src"         : null,
+    "utm_source"  : null,
+    "utm_medium"  : null,
+    "utm_campaign": null,
+    "utm_term"    : null,
+    "utm_content" : "Example+User-seq1-ba",
+    "utm_perfect" : null
+  },
+  "webhook_owner"       : "PPAKIOL",
+  "commission"          : [
+    {
+      "affiliation_code"     : "PPAJFTR",
+      "affiliation_type_enum": 5,
+      "name"                 : "USER EXAMPLE NAME",
+      "email"                : "user_example@gmail.com",
+      "identification_number": "07958658745",
+      "commission_amount"    : 0
+    },
+    {
+      "affiliation_code"     : "PPAGSDE",
+      "affiliation_type_enum": 1,
+      "name"                 : "User Affiliation Example",
+      "email"                : "affiliation_example@gmail.com",
+      "identification_number": "08745785448",
+      "commission_amount"    : 440.28
+    },
+    {
+      "name"                 : "PerfectPay",
+      "commission_amount"    : 53.72,
+      "affiliation_type_enum": 0
+    }
+  ],
+  "marketplaces":{
+     "PPMPCJI1G1":{
+        "name":"HubSmart",
+        "itens":-9.5,
+        "sale":-26
+     }
+  }
+}
+1 => BRL
+coupon_code	Identificador do cupom utilizado	String(255)
+installments	Número de parcelas	Integer(4)
+installment_amount	Valor da parcela	Decimal(8,2)
+shipping_type_enum	Status do frete	
+Small Integer
+Possíveis valores:
+1 => frete grátis,
+2 => frete fixo
+shipping_amount	Valor do frete	Decimal(8,2)
+payment_method_enum	Método de pagamento	
+Número até 4 dígitos
+
+Possíveis valores:
+
+🎨 Possíveis Valores para Parâmetros:
+
+0 => 'none',
+1 => 'visa',
+2 => 'bolbradesco',
+3 => 'amex',
+4 => 'elo',
+5 => 'hipercard',
+6 => 'master',
+7 => 'melicard',
+8 => 'free_price',
+payment_type_enum	Tipo de pagamento	
+Small integer
+
+Possíveis valores:
+
+0 => 'none',
+1 => 'credit_card',
+2 => 'ticket', // boleto bancário
+3 => 'paypal',
+4 => 'credit_card_recurrent',
+5 => 'free_price',
+6 => 'credit_card_upsell',
+billet_url	URL do boleto	String(255)
+billet_number	Linha digitável do boleto	String(255)
+billet_expiration	Data de expiração do boleto	DateTime
+quantity	Quantidade produtos	Integer(4)
+sale_status_enum	Status da venda	
+Small Integer
+
+Possíveis valores:
+
+0 => 'none',
+1 => 'pending', // boleto pendente
+2 => 'approved', // venda aprovada boleto ou cartão
+3 => 'in_process', // em revisão manual
+4 => 'in_mediation', // em moderação
+5 => 'rejected', // rejeitado
+6 => 'cancelled', // cancelado do cartão
+7 => 'refunded', // devolvido
+8 => 'authorized', // autorizada
+9 => 'charged_back', // solicitado charge back
+10 => 'completed', // 30 dias após a venda aprovada
+11 => 'checkout_error', // erro durante checkout
+12 => 'precheckout', // abandono
+13 => 'expired', // boleto expirado
+16 => 'in_review', // em análise
+sale_status_detail	Detalhe do status da venda.	String(255)
+date_created	Data do pedido	
+DateTime
+
+Ex: 2019-04-10 18:50:56
+
+date_approved	Data de aprovação	
+DateTime
+
+Ex: 2019-04-10 18:50:56
+
+product
+
+->code
+
+Código identificador do produto	String(255)
+product
+
+->name
+
+Nome do produto que foi adquirido	String(255)
+product
+
+->external_reference
+
+Código externo do produto para uso em plataformas externas	String(255)
+product
+
+->garantee
+
+Garantia do produto	Integer(4)
+plan
+
+->code
+
+Código identificador do plano	String(255)
+plan
+
+->name
+
+Nome do plano adquirido	String(50)
+plan
+
+->quantity
+
+Quantidade adquirida	Integer(11)
+plan_itens	Quando possuem itens adicionais entregues ao produto	array()
+customer
+
+->customer_type_enum
+
+Tipo pessoa física ou Jurídica	
+Integer(4)
+
+Possíveis valores:
+
+1 => 'physics',
+2 => 'juridical',
+customer
+
+->full_name
+
+Nome completo do comprador	String(255)
+customer
+
+->email
+
+E-mail do comprador	String(255)
+customer
+
+->identification_type
+
+Tipo de documentom que varia de acordo com a nacionalidade e natureza jurídica do comprador	
+String(20)
+
+Ex: CPF ou CNPJ para compradores brasileiros.
+
+customer
+
+->identification_number
+
+CPF ou CNPJ usado do comprador	String(45)
+customer
+
+->birthday
+
+Data de Nascimento do comprador	Date
+customer
+
+->phone_area_code
+
+Código área do telefone do comprador	String(15)
+customer
+
+->phone_number
+
+Número telefone do comprador	String(15)
+customer
+
+->country
+
+País do comprador	String(20)
+customer
+
+->state
+
+Estado do comprador	String(45)
+customer
+
+->city
+
+Cidade do comprador	String(255)
+customer
+
+->zip_code
+
+Código Postal do comprador	String(50)
+customer
+
+->street_name
+
+Endereço do comprador	String(255)
+customer
+
+->street_number
+
+Número endereço do comprador	String(50)
+customer
+
+->complement
+
+Complemento do endereço do comprador	String(100)
+customer
+
+->district
+
+Cidade do comprador	String(100)
+metadata
+
+->src
+
+Identificador customizado pelo usuário	String(100)
+metadata
+
+->utm_source
+
+Identificador customizado pelo usuário	String(100)
+metadata
+
+->utm_medium
+
+Identificador customizado pelo usuário	String(100)
+metadata
+
+->utm_campaign
+
+Identificador customizado pelo usuário	String(10)
+metadata
+
+->utm_term
+
+Identificador customizado pelo usuário	String(100)
+metadata
+
+->utm_content
+
+Identificador customizado pelo usuário	String(100)
+metadata
+
+->utm_perfect
+
+Identificador customizado pelo usuário	String(100)
+webhook_owner	Code do usuário que configurou para receber esse Webhook	String(100)
+commission	Podem existir n comissões para cada venda	array()
+commission
+
+->affiliation_code
+
+Código do Afiliado	String(100)
+commission
+
+->affiliation_type_enum
+
+Tipo de afiliação	
+Small Integer
+
+Possíveis valores:
+
+0 => 'platform',//'Plataforma',
+1 => 'producer',//'Produtor',
+2 => 'co_producer',//'Co-Produtor',
+3 => 'affiliate_management',//'Gerente de Afiliados',
+4 => 'partner',//'Parceiro',
+5 => 'affiliate',//'Afiliado',
+6 => 'premium', // 'Prêmio'
+7 => 'provider', // 'Fornecedor'
+commission
+
+->name
+
+Nome do afiliado	String(255)
+commission
+
+->email
+
+E-mail do Afiliado	String(255)
+commission
+
+->identification_number
+
+CPF ou CNPJ do afiliado	String(100)
+commission
+
+->commission_amount
+
+Código do Afiliado	String(100)
+marketplaces	Podem existir n marketplaces para cada venda	array()
+marketplaces
+
+->{code}
+
+->name
+
+{code} - código referente ao marketplace atrelado
+
+String(100)
+marketplaces
+
+->{code}
+
+->itens
+
+Valor total cobrado referente a quantidade de itens vendidos
+
+Ex. Venda de encapsulados, tem um valor específico para cada pote vendido, esse valor já vem calculado quantidade de itens no plano vendido x valor por item cobrado pelo marketplace. 
+
+double(8,2)
+marketplaces
+
+->{code}
+
+->sale
+
+Valor total cobrado referente ao pedido
+
+Ex. Venda de encapsulados, tem um valor específico para cada pedido. Se for configurado R$25 por pedido para custo de envio, será cobrado R$25 por pedido.
+
+double(8,2)
+{
+  "token"               : "7378fa24f96b38a3b1805d7a6887bc82",
+  "code"                : "PPCPMTB58MNF4E",
+  "sale_amount"         : 385,
+  "currency_enum"       : 1,
+  "coupon_code"         : null,
+  "installments"        : 12,
+  "installment_amount"  : null,
+  "shipping_type_enum"  : 1,
+  "shipping_amount"     : null,
+  "payment_method_enum" : 4,
+  "payment_type_enum"   : 1,
+  "billet_url"          : "",
+  "billet_number"       : null,
+  "billet_expiration"   : null,
+  "quantity"            : 5,
+  "sale_status_enum"    : 0,
+  "sale_status_detail"  : "checkout_saved",
+  "date_created"        : "2019-03-09 08:24:02",
+  "date_approved"       : null,
+  "product"             : {
+    "code"              : "PPPB3A07",
+    "name"              : "Herus Caps",
+    "external_reference": "42433",
+    "guarantee"         : 30
+  },
+  "plan"                : {
+    "code"    : "PPLQQ9Q9R",
+    "name"    : "Herus Caps | 3 potes + 2 potes gratis",
+    "quantity": 5
+  },
+  "plan_itens"          : [],
+  "customer"            : {
+    "customer_type_enum"   : 1,
+    "full_name"            : "USER EXAMPLE",
+    "email"                : "user_example2019@hotmail89254",
+    "identification_type"  : "CPF",
+    "identification_number": "57856874587",
+    "birthday"             : "2020-08-28",
+    "phone_area_code"      : "47",
+    "phone_number"         : "9965568558",
+    "street_name"          : "Rua Example Street",
+    "street_number"        : "54",
+    "district"             : "Example",
+    "complement"           : "",
+    "zip_code"             : "65875-564",
+    "city"                 : "Example City",
+    "state"                : "RJ",
+    "country"              : "BR"
+  },
+  "metadata"            : {
+    "src"         : null,
+    "utm_source"  : null,
+    "utm_medium"  : null,
+    "utm_campaign": null,
+    "utm_term"    : null,
+    "utm_content" : "Example+User-seq1-ba",
+    "utm_perfect" : null
+  },
+  "webhook_owner"       : "PPAKIOL",
+  "commission"          : [
+    {
+      "affiliation_code"     : "PPAJFTR",
+      "affiliation_type_enum": 5,
+      "name"                 : "USER EXAMPLE NAME",
+      "email"                : "user_example@gmail.com",
+      "identification_number": "07958658745",
+      "commission_amount"    : 0
+    },
+    {
+      "affiliation_code"     : "PPAGSDE",
+      "affiliation_type_enum": 1,
+      "name"                 : "User Affiliation Example",
+      "email"                : "affiliation_example@gmail.com",
+      "identification_number": "08745785448",
+      "commission_amount"    : 440.28
+    },
+    {
+      "name"                 : "PerfectPay",
+      "commission_amount"    : 53.72,
+      "affiliation_type_enum": 0
+    }
+  ],
+  "marketplaces":{
+     "PPMPCJI1G1":{
+        "name":"HubSmart",
+        "itens":-9.5,
+        "sale":-26
+     }
+  }
+}

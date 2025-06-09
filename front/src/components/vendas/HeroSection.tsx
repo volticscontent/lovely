@@ -65,7 +65,7 @@ export default function HeroSection() {
 
   // Rastrear visualização da seção Hero
   useEffect(() => {
-    trackSectionView('Hero', 'hero-section');
+    trackSectionView('Hero');
   }, []);
 
   // Função para rolagem suave até a seção "plans"

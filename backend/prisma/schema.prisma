@@ -1,466 +1,86 @@
-// Schema completo do Lovely App
-// Incluindo todas as funcionalidades: jogos, fantasias, conquistas, modos, etc.
+// Schema ULTRA SIMPLIFICADO do Lovely App
+// Apenas o essencial: usuários e perfis básicos
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
-// ==================== ENUMS ====================
-
-enum PaymentStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
-  CANCELLED
-  REFUNDED
-}
-
-enum PlanType {
-  NO_CLIMINHA
-  MODO_QUENTE
-  SEM_FREIO
-}
-
-enum GameType {
-  CLASSIC
-  QUIZ
-  ADVENTURE
-  ROLEPLAY
-  MASSAGE
-  CONNECTION
-  FANTASY
-}
-
-enum GameDifficulty {
-  EASY
-  MEDIUM
-  HARD
-  EXTREME
-}
-
-enum AchievementType {
-  MILESTONE
-  WEEKLY
-  MONTHLY
-  EXPLORATION
-  MASTERY
-  SPECIAL
-}
-
-enum FantasyCategory {
-  ROMANTIC
-  SENSUAL
-  ADVENTURE
-  ROLEPLAY
-  MASSAGE
-  CONNECTION
-}
-
-enum MoodLevel {
-  CALM
-  PLAYFUL
-  PASSIONATE
-  ADVENTUROUS
-  INTIMATE
-}
-
-enum DarinessLevel {
-  BEGINNER
-  INTERMEDIATE
-  ADVANCED
-  EXPERT
-}
-
-// ==================== MODELOS PRINCIPAIS ====================
+// ==================== MODELOS ESSENCIAIS ====================
 
 // Usuários
 model User {
-  id                String         @id @default(uuid())
-  email             String         @unique
-  name              String
-  password          String
-  isActive          Boolean        @default(true)
-  emailVerified     Boolean        @default(false)
-  emailVerifiedAt   DateTime?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String?  // Opcional para usuários criados via webhook
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // Relacionamentos
-  profiles          Profile[]
-  subscriptions     Subscription[]
-  sessions          Session[]
-  payments          Payment[]
-  workspaces        WorkspaceUser[]
-  achievements      UserAchievement[]
-  gameProgress      GameProgress[]
+  // Relacionamento
+  profile      Profile?
+  subscription Subscription?
 
   @@map("users")
 }
 
-// Perfis detalhados dos usuários
+// Perfil básico do usuário
 model Profile {
-  id              String        @id @default(uuid())
-  userId          String        @unique
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   // Informações básicas
-  partnerName     String?
-  avatar          String?
-  bio             String?
+  partnerName   String?
+  moodToday     String   @default("PLAYFUL")
+  darinessLevel Int      @default(1) // 1-10
   
-  // Personalização
-  moodToday       MoodLevel     @default(PLAYFUL)
-  darinessLevel   DarinessLevel @default(BEGINNER)
-  preferences     String[]      // Array de preferências
-  taboos          String[]      // Array de tabus
-  
-  // Configurações
-  notifications   Boolean       @default(true)
-  privateMode     Boolean       @default(false)
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@map("profiles")
 }
 
-// Workspaces (espaços compartilhados entre casais)
-model Workspace {
-  id              String          @id @default(uuid())
-  name            String
-  description     String?
-  isActive        Boolean         @default(true)
-  
-  // Configurações do workspace
-  settings        Json?           // Configurações personalizadas
-  
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  
-  // Relacionamentos
-  participants    WorkspaceUser[]
-  gameSessions    GameSession[]
-  fantasyMatches  FantasyMatch[]
-
-  @@map("workspaces")
-}
-
-// Relacionamento usuário-workspace
-model WorkspaceUser {
-  id            String    @id @default(uuid())
-  userId        String
-  workspaceId   String
-  role          String    @default("member") // owner, member
-  joinedAt      DateTime  @default(now())
-  
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, workspaceId])
-  @@map("workspace_users")
-}
-
-// ==================== PLANOS E ASSINATURAS ====================
-
-// Planos
-model Plan {
-  id            String    @id @default(uuid())
-  name          String    @unique
-  type          PlanType
-  description   String
-  price         Float
-  duration      Int       // em dias
-  
-  // Configurações de UI
-  displayName   String
-  subtitle      String
-  buttonText    String
-  isHighlighted Boolean   @default(false)
-  badge         String?
-  
-  // Funcionalidades
-  features      String[]  // Array de features
-  maxUsers      Int       @default(2)
-  planLevel     Int       // 1, 2, 3 para hierarquia
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  // Relacionamentos
-  subscriptions Subscription[]
-  payments      Payment[]
-
-  @@map("plans")
-}
-
-// Assinaturas
+// Assinaturas dos usuários
 model Subscription {
-  id            String    @id @default(uuid())
-  userId        String
-  planId        String
-  status        String    @default("active") // active, cancelled, expired
-  startDate     DateTime  @default(now())
-  endDate       DateTime?
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  // Dados do Perfect Pay
+  planCode    String   // PPU38CPQ6NQ, PPU38CPQ73K, PPU38CPQ742
+  planType    String   // basico, medio, premium
+  saleCode    String   @unique // Código da venda do Perfect Pay
+  status      String   @default("ACTIVE") // ACTIVE, CANCELLED, EXPIRED
   
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan          Plan      @relation(fields: [planId], references: [id])
-  payments      Payment[]
+  // Valores
+  amount      Float
+  currency    String   @default("BRL")
+  
+  // Datas
+  startDate   DateTime @default(now())
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@map("subscriptions")
 }
 
-// ==================== JOGOS E MODOS ====================
+// Log de webhooks recebidos
+model WebhookLog {
+  id          String   @id @default(uuid())
+  token       String   // Token do Perfect Pay
+  saleCode    String   // Código da venda
+  status      String   // Status da venda
+  event       String   // Tipo do evento
+  payload     String   // JSON completo do webhook
+  processed   Boolean  @default(false)
+  error       String?  // Erro se houver
+  createdAt   DateTime @default(now())
 
-// Modos de jogo
-model GameMode {
-  id                String    @id @default(uuid())
-  name              String    @unique
-  description       String
-  icon              String?
-  requiredPlanLevel Int       @default(1)
-  isActive          Boolean   @default(true)
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
-  // Relacionamentos
-  games             Game[]
-
-  @@map("game_modes")
-}
-
-// Jogos
-model Game {
-  id                String        @id @default(uuid())
-  name              String        @unique
-  description       String
-  type              GameType
-  difficulty        GameDifficulty
-  duration          Int           // em minutos
-  requiredPlanLevel Int           @default(1)
-  
-  // Conteúdo do jogo
-  content           Json          // Regras, perguntas, desafios, etc.
-  
-  // Configurações
-  isActive          Boolean       @default(true)
-  gameModeId        String?
-  
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  
-  // Relacionamentos
-  gameMode          GameMode?     @relation(fields: [gameModeId], references: [id])
-  sessions          GameSession[]
-  progress          GameProgress[]
-
-  @@map("games")
-}
-
-// Sessões de jogo
-model GameSession {
-  id            String    @id @default(uuid())
-  workspaceId   String
-  gameId        String
-  
-  // Dados da sessão
-  startedAt     DateTime  @default(now())
-  completedAt   DateTime?
-  score         Int?
-  duration      Int?      // em segundos
-  
-  // Dados da sessão
-  sessionData   Json?     // Respostas, escolhas, etc.
-  
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  game          Game      @relation(fields: [gameId], references: [id])
-
-  @@map("game_sessions")
-}
-
-// Progresso individual dos usuários nos jogos
-model GameProgress {
-  id            String    @id @default(uuid())
-  userId        String
-  gameId        String
-  
-  // Progresso
-  timesPlayed   Int       @default(0)
-  bestScore     Int?
-  totalTime     Int       @default(0) // em segundos
-  lastPlayedAt  DateTime?
-  
-  // Dados específicos
-  progressData  Json?     // Conquistas específicas do jogo
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  game          Game      @relation(fields: [gameId], references: [id])
-
-  @@unique([userId, gameId])
-  @@map("game_progress")
-}
-
-// ==================== FANTASIAS ====================
-
-// Fantasias
-model Fantasy {
-  id                String          @id @default(uuid())
-  name              String          @unique
-  description       String
-  category          FantasyCategory
-  intensityLevel    Int             // 1-5
-  requiredPlanLevel Int             @default(1)
-  
-  // Conteúdo da fantasia
-  content           Json            // Setup, passos, materiais, etc.
-  
-  // Configurações
-  isActive          Boolean         @default(true)
-  
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  
-  // Relacionamentos
-  matches           FantasyMatch[]
-
-  @@map("fantasies")
-}
-
-// Matches de fantasias entre usuários
-model FantasyMatch {
-  id            String    @id @default(uuid())
-  workspaceId   String
-  fantasyId     String
-  
-  // Usuários que escolheram esta fantasia
-  userIds       String[]  // Array de IDs dos usuários
-  
-  // Status
-  isRevealed    Boolean   @default(false)
-  revealedAt    DateTime?
-  completedAt   DateTime?
-  
-  // Dados da experiência
-  experienceData Json?
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  fantasy       Fantasy   @relation(fields: [fantasyId], references: [id])
-
-  @@map("fantasy_matches")
-}
-
-// ==================== CONQUISTAS ====================
-
-// Conquistas disponíveis
-model Achievement {
-  id                String            @id @default(uuid())
-  name              String            @unique
-  description       String
-  type              AchievementType
-  requiredPlanLevel Int               @default(1)
-  
-  // Condições para desbloquear
-  condition         String            // Condição em formato string
-  reward            String            // Descrição da recompensa
-  points            Int               @default(0)
-  
-  // Configurações
-  isActive          Boolean           @default(true)
-  icon              String?
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  
-  // Relacionamentos
-  userAchievements  UserAchievement[]
-
-  @@map("achievements")
-}
-
-// Conquistas dos usuários
-model UserAchievement {
-  id            String      @id @default(uuid())
-  userId        String
-  achievementId String
-  
-  // Dados da conquista
-  unlockedAt    DateTime    @default(now())
-  progress      Int         @default(100) // Porcentagem de progresso
-  
-  // Metadados
-  metadata      Json?       // Dados específicos da conquista
-  
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  achievement   Achievement @relation(fields: [achievementId], references: [id])
-
-  @@unique([userId, achievementId])
-  @@map("user_achievements")
-}
-
-// ==================== SISTEMA DE AUTENTICAÇÃO ====================
-
-// Sessões
-model Session {
-  id            String    @id @default(uuid())
-  token         String    @unique
-  userId        String
-  expiresAt     DateTime
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
-
-// ==================== PAGAMENTOS ====================
-
-// Pagamentos
-model Payment {
-  id                String        @id @default(uuid())
-  userId            String
-  subscriptionId    String?
-  planId            String
-  amount            Float
-  currency          String        @default("BRL")
-  status            PaymentStatus @default(PENDING)
-  method            String?
-  
-  // Lastlink
-  lastlinkId        String?       @unique
-  lastlinkStatus    String?
-  externalId        String?
-  pixCode           String?
-  pixQrCode         String?
-  
-  // Metadados
-  metadata          Json?
-  
-  // Timestamps
-  paidAt            DateTime?
-  expiresAt         DateTime?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  
-  // Relacionamentos
-  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subscription      Subscription? @relation(fields: [subscriptionId], references: [id])
-  plan              Plan          @relation(fields: [planId], references: [id])
-
-  @@map("payments")
+  @@map("webhook_logs")
 } 

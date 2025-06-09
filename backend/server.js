@@ -1,1285 +1,732 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-const rateLimit = require('express-rate-limit');
 const { PrismaClient } = require('@prisma/client');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3333;
-const JWT_SECRET = process.env.JWT_SECRET || 'pleasuregame-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'lovelyapp-secret';
+const APP_BASE_URL = process.env.APP_URL || process.env.LOVELY_APP_URL || 'http://localhost:3001';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-const LOVELY_APP_URL = process.env.LOVELY_APP_URL || 'http://localhost:3001';
 
-// Configurações de segurança para webhooks
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'your-webhook-secret-key';
-const WEBHOOK_TOKEN = process.env.WEBHOOK_TOKEN || 'ad7e97a7b9af490c8b596feddd055350';
-const WEBHOOK_TIMEOUT = parseInt(process.env.WEBHOOK_TIMEOUT) || 300; // 5 minutos
+// ✅ DEBUG: Mostrar variáveis de ambiente carregadas
+console.log('\n🔧 [DEBUG] Variáveis de ambiente carregadas:');
+console.log('📍 NODE_ENV:', process.env.NODE_ENV);
+console.log('📍 APP_URL:', process.env.APP_URL);
+console.log('📍 LOVELY_APP_URL:', process.env.LOVELY_APP_URL);
+console.log('📍 FRONTEND_URL:', process.env.FRONTEND_URL);
+console.log('📍 APP_BASE_URL (final):', APP_BASE_URL);
+console.log('📍 FRONTEND_URL (final):', FRONTEND_URL);
+console.log('');
 
-// Inicializar Prisma Client
+// Inicializar Prisma
 const prisma = new PrismaClient();
 
-// Função utilitária para gerar códigos aleatórios
-function generateRandomCode(length = 9) {
-  return Math.random().toString(36).substr(2, length);
-}
+// ========================================
+// SISTEMA DE LOGS COLORIDOS
+// ========================================
 
-// Função utilitária para validar email
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-function isValidEmail(email) {
-  return EMAIL_REGEX.test(email);
-}
+const colors = {
+  reset: '\x1b[0m',
+  bright: '\x1b[1m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m'
+};
 
-// Rate limiting para webhooks
-const webhookLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // máximo 100 requests por IP por janela
-  message: {
-    error: 'Muitas requisições de webhook. Tente novamente em 15 minutos.',
-    code: 'RATE_LIMIT_EXCEEDED'
+const log = {
+  info: (message, data = null) => {
+    const timestamp = new Date().toLocaleString('pt-BR');
+    console.log(`${colors.cyan}[${timestamp}] ℹ️  ${message}${colors.reset}`);
+    if (data) console.log(`${colors.cyan}   📄 Dados:${colors.reset}`, data);
   },
-  standardHeaders: true,
-  legacyHeaders: false
+  success: (message, data = null) => {
+    const timestamp = new Date().toLocaleString('pt-BR');
+    console.log(`${colors.green}[${timestamp}] ✅ ${message}${colors.reset}`);
+    if (data) console.log(`${colors.green}   📄 Dados:${colors.reset}`, data);
+  },
+  warning: (message, data = null) => {
+    const timestamp = new Date().toLocaleString('pt-BR');
+    console.log(`${colors.yellow}[${timestamp}] ⚠️  ${message}${colors.reset}`);
+    if (data) console.log(`${colors.yellow}   📄 Dados:${colors.reset}`, data);
+  },
+  error: (message, error = null) => {
+    const timestamp = new Date().toLocaleString('pt-BR');
+    console.log(`${colors.red}[${timestamp}] ❌ ${message}${colors.reset}`);
+    if (error) console.log(`${colors.red}   🔥 Erro:${colors.reset}`, error);
+  },
+  webhook: (message, data = null) => {
+    const timestamp = new Date().toLocaleString('pt-BR');
+    console.log(`${colors.magenta}[${timestamp}] 🔔 WEBHOOK: ${message}${colors.reset}`);
+    if (data) console.log(`${colors.magenta}   📄 Dados:${colors.reset}`, data);
+  },
+  auth: (message, data = null) => {
+    const timestamp = new Date().toLocaleString('pt-BR');
+    console.log(`${colors.blue}[${timestamp}] 🔐 AUTH: ${message}${colors.reset}`);
+    if (data) console.log(`${colors.blue}   📄 Dados:${colors.reset}`, data);
+  },
+  redirect: (message, data = null) => {
+    const timestamp = new Date().toLocaleString('pt-BR');
+    console.log(`${colors.yellow}[${timestamp}] 🔄 REDIRECT: ${message}${colors.reset}`);
+    if (data) console.log(`${colors.yellow}   📄 Dados:${colors.reset}`, data);
+  },
+  request: (method, url, ip) => {
+    const timestamp = new Date().toLocaleString('pt-BR');
+    console.log(`${colors.white}[${timestamp}] 📡 ${method} ${url} - IP: ${ip}${colors.reset}`);
+  }
+};
+
+// Middleware para logar todas as requisições
+app.use((req, res, next) => {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  log.request(req.method, req.url, ip);
+  next();
 });
 
-// Middleware básico
+// CORS simples
 app.use(cors({
-  origin: [FRONTEND_URL, LOVELY_APP_URL, 'http://localhost:3000', 'http://localhost:3001'],
+  origin: [
+      process.env.FRONTEND_URL || 'http://localhost:3000',
+      process.env.APP_URL || 'http://localhost:3001'
+  ],
   credentials: true
 }));
+
 app.use(express.json());
 
-// Função para validar assinatura HMAC
-function validateWebhookSignature(payload, signature, secret) {
-  if (!signature || !secret) {
-    return false;
-  }
-  
-  try {
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(payload, 'utf8')
-      .digest('hex');
-    
-    const cleanSignature = signature.replace(/^sha256=/, '');
-    
-    return crypto.timingSafeEqual(
-      Buffer.from(expectedSignature, 'hex'),
-      Buffer.from(cleanSignature, 'hex')
-    );
-  } catch (error) {
-    console.error('❌ Erro na validação de assinatura:', error.message);
-    return false;
-  }
+// Mapeamento dos planos Perfect Pay
+const PLAN_MAPPING = {
+  'PPU38CPQ6NQ': { type: 'basico', name: 'Plano Básico' },
+  'PPU38CPQ73K': { type: 'medio', name: 'Plano Médio' },
+  'PPU38CPQ742': { type: 'premium', name: 'Plano Premium' }
+};
+
+// Função para gerar senha aleatória
+function generateRandomPassword() {
+  return crypto.randomBytes(8).toString('hex');
 }
 
-// Função para validar timestamp (proteção contra replay attacks)
-function validateTimestamp(timestamp, tolerance = WEBHOOK_TIMEOUT) {
-  if (!timestamp) {
-    return false;
+// Função para processar webhook do Perfect Pay
+async function processWebhook(webhookData) {
+  const { 
+    token, 
+    code: saleCode, 
+    sale_status_enum, 
+    sale_amount,
+    customer,
+    plan,
+    date_approved 
+  } = webhookData;
+
+  log.webhook(`Processando webhook para venda ${saleCode}`, {
+    status: sale_status_enum,
+    customer: customer.email,
+    plan: plan.code,
+    amount: sale_amount
+  });
+
+  // Log do webhook
+  const webhookLog = await prisma.webhookLog.create({
+    data: {
+      token,
+      saleCode,
+      status: sale_status_enum.toString(),
+      event: 'payment_notification',
+      payload: JSON.stringify(webhookData),
+      processed: false
+    }
+  });
+
+  try {
+    // Verificar se é uma venda aprovada
+    if (sale_status_enum !== 2) { // 2 = approved
+      log.warning(`Venda ${saleCode} não aprovada`, { status: sale_status_enum });
+      return { success: false, message: 'Venda não aprovada' };
+    }
+
+    // Identificar o plano
+    const planInfo = PLAN_MAPPING[plan.code];
+    if (!planInfo) {
+      throw new Error(`Plano não reconhecido: ${plan.code}`);
+    }
+
+    log.info(`Plano identificado: ${planInfo.name} (${planInfo.type})`);
+
+    // Verificar se usuário já existe
+    let user = await prisma.user.findUnique({
+      where: { email: customer.email.toLowerCase() }
+    });
+
+    // Criar usuário se não existir
+    if (!user) {
+      const randomPassword = generateRandomPassword();
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      user = await prisma.user.create({
+      data: {
+          email: customer.email.toLowerCase(),
+          name: customer.full_name,
+          password: hashedPassword
+        }
+      });
+
+      // Criar perfil básico
+      await prisma.profile.create({
+        data: {
+        userId: user.id,
+          darinessLevel: planInfo.type === 'basico' ? 3 : planInfo.type === 'medio' ? 5 : 7
+        }
+      });
+
+      log.success(`Novo usuário criado: ${user.email}`, { 
+        senha: randomPassword,
+        darinessLevel: planInfo.type === 'basico' ? 3 : planInfo.type === 'medio' ? 5 : 7
+      });
+    } else {
+      log.info(`Usuário existente encontrado: ${user.email}`);
+    }
+
+    // Criar ou atualizar assinatura
+    await prisma.subscription.upsert({
+      where: { userId: user.id },
+      update: {
+        planCode: plan.code,
+        planType: planInfo.type,
+        saleCode,
+        status: 'ACTIVE',
+        amount: sale_amount,
+        startDate: date_approved ? new Date(date_approved) : new Date()
+      },
+      create: {
+        userId: user.id,
+        planCode: plan.code,
+        planType: planInfo.type,
+        saleCode,
+        status: 'ACTIVE',
+        amount: sale_amount,
+        startDate: date_approved ? new Date(date_approved) : new Date()
+      }
+    });
+
+    log.success(`Assinatura ${user.subscription ? 'atualizada' : 'criada'}`, {
+      plano: planInfo.name,
+      valor: sale_amount,
+      status: 'ACTIVE'
+    });
+
+    // Marcar webhook como processado
+    await prisma.webhookLog.update({
+      where: { id: webhookLog.id },
+      data: { processed: true }
+    });
+
+    log.webhook(`Webhook processado com sucesso: ${saleCode}`, {
+      usuario: user.email,
+      plano: planInfo.name
+    });
+    
+    return { 
+      success: true, 
+      message: 'Webhook processado com sucesso',
+      user: { id: user.id, email: user.email, plan: planInfo.type }
+    };
+
+  } catch (error) {
+    log.error('Erro ao processar webhook', error);
+    
+    // Salvar erro no log
+    await prisma.webhookLog.update({
+      where: { id: webhookLog.id },
+      data: {
+        processed: false,
+        error: error.message 
+      }
+    });
+
+    throw error;
   }
-  
-  const now = Math.floor(Date.now() / 1000);
-  const webhookTime = parseInt(timestamp);
-  
-  return Math.abs(now - webhookTime) <= tolerance;
 }
 
 // Middleware de autenticação
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
+const auth = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  
   if (!token) {
-    return res.status(401).json({ error: 'Token de acesso requerido' });
+    log.warning('Tentativa de acesso sem token', { url: req.url });
+    return res.status(401).json({ error: 'Token necessário' });
   }
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: 'Token inválido' });
-    }
-    req.user = user;
+  
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+    log.auth(`Token válido para usuário ${req.user.email}`, { userId: req.user.userId });
     next();
-  });
+  } catch {
+    log.warning('Token inválido fornecido', { url: req.url });
+    res.status(403).json({ error: 'Token inválido' });
+  }
 };
 
 // ========================================
-// ROTAS DE HEALTH CHECK
+// ROTAS ESSENCIAIS
 // ========================================
 
+// Health check
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    message: 'PleasureGame API funcionando!',
-    timestamp: new Date().toISOString()
-  });
+  log.info('Health check solicitado');
+  res.json({ status: 'OK', app: 'LovelyApp' });
 });
 
 // ========================================
-// ROTAS DE AUTENTICAÇÃO
+// WEBHOOK PERFECT PAY
 // ========================================
 
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/webhook/perfect-pay', async (req, res) => {
   try {
-    const { email, password, name } = req.body;
-
-    if (!email || !password || !name) {
-      return res.status(400).json({ error: 'Email, senha e nome são obrigatórios' });
-    }
-
-    // Validações de senha
-    if (password.length < 8) {
-      return res.status(400).json({ error: 'A senha deve ter pelo menos 8 caracteres' });
-    }
+    log.webhook('Webhook Perfect Pay recebido', req.body);
     
-    if (!/[A-Z]/.test(password)) {
-      return res.status(400).json({ error: 'A senha deve conter pelo menos uma letra maiúscula' });
-    }
+    const result = await processWebhook(req.body);
     
-    if (!/[a-z]/.test(password)) {
-      return res.status(400).json({ error: 'A senha deve conter pelo menos uma letra minúscula' });
-    }
-    
-    if (!/[0-9]/.test(password)) {
-      return res.status(400).json({ error: 'A senha deve conter pelo menos um número' });
-    }
-
-    // Validação de email
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ error: 'Email inválido' });
-    }
-
-    // Verificar se usuário já existe
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
-    
-    if (existingUser) {
-      return res.status(400).json({ error: 'Usuário já existe' });
-    }
-
-    // Hash da senha
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Criar usuário
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-        isActive: true,
-        emailVerified: false
-      }
+    res.status(200).json({ 
+      success: true, 
+      message: 'Webhook processado com sucesso',
+      data: result
     });
 
-    // Gerar token (sem expiração)
-    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET);
-
-    // Buscar assinatura ativa do usuário para determinar o plano
-    const subscription = await prisma.subscription.findFirst({
-      where: { 
-        userId: user.id,
-        status: 'active'
-      },
-      include: { plan: true },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    // Determinar plano do usuário
-    let planType = 'no-climinha';
-    if (subscription && subscription.plan) {
-      switch (subscription.plan.name.toLowerCase()) {
-        case 'no climinha':
-          planType = 'no-climinha';
-          break;
-        case 'modo quente':
-          planType = 'modo-quente';
-          break;
-        case 'sem freio':
-        case 'sem-freio':
-          planType = 'sem-freio';
-          break;
-        default:
-          planType = 'no-climinha';
-      }
-    }
-
-    // URL de redirecionamento para o app com estrutura correta
-    const redirectUrl = `${LOVELY_APP_URL}/${user.id}/${planType}?token=${token}`;
-
-    res.status(201).json({
-      message: 'Usuário criado com sucesso',
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name
-      },
-      redirectUrl
-    });
   } catch (error) {
-    console.error('💥 Erro no registro:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    log.error('Erro no webhook Perfect Pay', error);
+    
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erro ao processar webhook',
+      message: error.message
+    });
   }
 });
 
+// ========================================
+// AUTENTICAÇÃO
+// ========================================
+
+// Login
 app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email e senha são obrigatórios' });
-    }
-
-    // Encontrar usuário
-    const user = await prisma.user.findUnique({
-      where: { email }
+  const { email, password } = req.body;
+  
+  console.log(`[${new Date().toLocaleString('pt-BR')}] 🔐 Tentativa de login para: ${email}`);
+  
+  if (!email || !password) {
+    console.log(`[${new Date().toLocaleString('pt-BR')}] ❌ Email ou senha não fornecidos`);
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Email e senha são obrigatórios' 
     });
-    
+  }
+
+  try {
+    // Buscar usuário no banco
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        subscription: true
+      }
+    });
+
     if (!user) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
+      console.log(`[${new Date().toLocaleString('pt-BR')}] ❌ Usuário não encontrado: ${email}`);
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Credenciais inválidas' 
+      });
     }
 
     // Verificar senha
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      console.log(`[${new Date().toLocaleString('pt-BR')}] ❌ Senha inválida para: ${email}`);
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Credenciais inválidas' 
+      });
     }
 
-    // Gerar token (sem expiração)
-    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET);
-
-    // Buscar assinatura ativa do usuário para determinar o plano
-    const subscription = await prisma.subscription.findFirst({
-      where: { 
-        userId: user.id,
-        status: 'active'
+    // Gerar JWT token
+    const token = jwt.sign(
+      { 
+        userId: user.id, 
+        email: user.email 
       },
-      include: { plan: true },
-      orderBy: { createdAt: 'desc' }
-    });
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
-    // Determinar plano do usuário
-    let planType = 'no-climinha';
-    if (subscription && subscription.plan) {
-      switch (subscription.plan.name.toLowerCase()) {
-        case 'no climinha':
-          planType = 'no-climinha';
-          break;
-        case 'modo quente':
-          planType = 'modo-quente';
-          break;
-        case 'sem freio':
-        case 'sem-freio':
-          planType = 'sem-freio';
-          break;
-        default:
-          planType = 'no-climinha';
-      }
-    }
+    console.log(`[${new Date().toLocaleString('pt-BR')}] ✅ Login bem-sucedido para: ${email}`);
+    console.log(`[${new Date().toLocaleString('pt-BR')}] 🔑 Token gerado: ${token.substring(0, 50)}...`);
 
-    // URL de redirecionamento para o app com estrutura correta
-    const redirectUrl = `${LOVELY_APP_URL}/${user.id}/${planType}?token=${token}`;
+    // Dados do usuário para incluir na URL
+    const userData = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      plan: user.subscription?.planType || 'free',
+      hasActiveSubscription: user.subscription?.status === 'ACTIVE',
+      darinessLevel: user.darinessLevel || 5,
+      partnerName: user.partnerName || 'Meu Amor'
+    };
+
+    // Usar callback na página principal do LovelyApp
+    const redirectUrl = `${APP_BASE_URL}/?token=${token}&user=${encodeURIComponent(JSON.stringify(userData))}`;
+    
+    console.log(`[${new Date().toLocaleString('pt-BR')}] 🔄 URL de redirecionamento: ${redirectUrl}`);
 
     res.json({
-      message: 'Login realizado com sucesso',
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name
-      },
-      redirectUrl
+      success: true,
+      data: {
+        user: userData,
+        token,
+        redirectUrl
+      }
     });
+
   } catch (error) {
-    console.error('💥 Erro no login:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error(`[${new Date().toLocaleString('pt-BR')}] ❌ Erro no login:`, error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erro interno do servidor' 
+    });
   }
 });
 
 // Validar token
-app.get('/api/auth/validate', authenticateToken, async (req, res) => {
+app.get('/api/auth/validate', auth, async (req, res) => {
   try {
+    log.auth(`Validando token para usuário: ${req.user.email}`);
+    
     const user = await prisma.user.findUnique({
       where: { id: req.user.userId },
-      include: {
-        subscriptions: {
-          where: { status: 'active' },
-          include: { plan: true },
-          orderBy: { createdAt: 'desc' },
-          take: 1
-        }
-      }
+      include: { subscription: true }
     });
-    
+
     if (!user) {
+      log.warning(`Usuário não encontrado para ID: ${req.user.userId}`);
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
 
-    // Determinar plano do usuário
-    let planType = 'no-climinha';
-    if (user.subscriptions && user.subscriptions.length > 0) {
-      const subscription = user.subscriptions[0];
-      if (subscription.plan) {
-        switch (subscription.plan.name.toLowerCase()) {
-          case 'no climinha':
-            planType = 'no-climinha';
-            break;
-          case 'modo quente':
-            planType = 'modo-quente';
-            break;
-          case 'sem freio':
-            planType = 'sem-freio';
-            break;
-          default:
-            planType = 'no-climinha';
-        }
-      }
-    }
+    const userData = { 
+      id: user.id, 
+      email: user.email, 
+      name: user.name,
+      plan: user.subscription?.planType || null,
+      hasActiveSubscription: user.subscription?.status === 'ACTIVE'
+    };
+
+    log.success(`Token validado com sucesso para: ${user.email}`, userData);
     
     res.json({
       success: true,
-      data: {
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          planType: planType
-        }
-      }
-    });
-  } catch (error) {
-    console.error('💥 Erro na validação do token:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// Logout
-app.post('/api/auth/logout', authenticateToken, (req, res) => {
-  try {
-    res.json({ message: 'Logout realizado com sucesso' });
-  } catch (error) {
-    console.error('💥 Erro no logout:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// Renovar token (caso necessário no futuro)
-app.post('/api/auth/refresh-token', authenticateToken, async (req, res) => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId }
-    });
-    
-    if (!user) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
-    }
-
-    // Gerar novo token (sem expiração)
-    const newToken = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET);
-    
-    res.json({
-      success: true,
-      token: newToken,
-      message: 'Token renovado com sucesso'
-    });
-  } catch (error) {
-    console.error('💥 Erro ao renovar token:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// Rota específica para redirecionamento do frontend para o app
-app.get('/api/auth/redirect-to-app', authenticateToken, async (req, res) => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-      include: {
-        subscriptions: {
-          where: { status: 'active' },
-          include: { plan: true },
-          orderBy: { createdAt: 'desc' },
-          take: 1
-        }
-      }
-    });
-    
-    if (!user) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
-    }
-
-    // Determinar plano do usuário
-    let planType = 'no-climinha';
-    if (user.subscriptions && user.subscriptions.length > 0) {
-      const subscription = user.subscriptions[0];
-      if (subscription.plan) {
-        switch (subscription.plan.name.toLowerCase()) {
-          case 'no climinha':
-            planType = 'no-climinha';
-            break;
-          case 'modo quente':
-            planType = 'modo-quente';
-            break;
-          case 'sem freio':
-            planType = 'sem-freio';
-            break;
-          default:
-            planType = 'no-climinha';
-        }
-      }
-    }
-
-    // Gerar novo token
-    const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET);
-    
-    // URL de redirecionamento para o app
-    const redirectUrl = `${LOVELY_APP_URL}/${user.id}/${planType}?token=${token}`;
-    
-    res.redirect(redirectUrl);
-  } catch (error) {
-    console.error('💥 Erro no redirecionamento:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// ========================================
-// WEBHOOK SEGURO DA LASTLINK
-// ========================================
-
-app.get(`/api/verify/${WEBHOOK_TOKEN}`, (req, res) => {
-  res.json({ 
-    status: 'verified', 
-    message: 'Webhook endpoint ativo',
-    timestamp: new Date().toISOString()
-  });
-});
-
-app.post(`/api/verify/${WEBHOOK_TOKEN}`, webhookLimiter, async (req, res) => {
-  try {
-    const timestamp = new Date().toISOString();
-    const sourceIp = req.ip || req.connection.remoteAddress || 'Unknown';
-    const userAgent = req.get('User-Agent') || 'Unknown';
-    
-    // Validação básica do payload
-    const webhookData = req.body;
-    if (!webhookData || typeof webhookData !== 'object') {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Payload inválido',
-        code: 'INVALID_PAYLOAD'
-      });
-    }
-
-    // Log de segurança (sem dados sensíveis)
-    console.log('🔔 Webhook recebido:', {
-      ip: sourceIp,
-      userAgent: userAgent.substring(0, 50),
-      eventType: webhookData.Event || webhookData.event || 'unknown',
-      timestamp
-    });
-
-    // Processar diferentes tipos de eventos
-    const eventType = webhookData.Event || webhookData.event;
-    if (eventType) {
-      switch (eventType) {
-        case 'Purchase_Order_Confirmed':
-        case 'payment.approved':
-          await handlePaymentApproved(webhookData.Data || webhookData.data);
-          break;
-        
-        case 'Purchase_Request_Confirmed':
-        case 'payment.pending':
-          await handlePaymentPending(webhookData.Data || webhookData.data);
-          break;
-        
-        case 'Payment_Refund':
-        case 'payment.failed':
-          await handlePaymentFailed(webhookData.Data || webhookData.data);
-          break;
-        
-        case 'Payment_Chargeback':
-        case 'payment.cancelled':
-          await handlePaymentCancelled(webhookData.Data || webhookData.data);
-          break;
-        
-        case 'test':
-          console.log('🧪 Teste da Lastlink recebido');
-          break;
-        
-        default:
-          console.log('❓ Evento desconhecido:', eventType);
-      }
-    }
-
-    // Resposta de sucesso
-    res.status(200).json({ 
-      success: true, 
-      message: 'Webhook processado com sucesso',
-      eventType: eventType,
-      timestamp 
+      data: { user: userData }
     });
 
   } catch (error) {
-    console.error('💥 Erro ao processar webhook:', error.message);
+    log.error('Erro na validação', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ========================================
+// PERFIL DO USUÁRIO
+// ========================================
+
+// Perfil do usuário
+app.get('/api/profile', auth, async (req, res) => {
+  try {
+    log.info(`Carregando perfil para usuário: ${req.user.email}`);
     
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor',
-      code: 'INTERNAL_ERROR',
-      timestamp: new Date().toISOString()
+    let profile = await prisma.profile.findUnique({
+      where: { userId: req.user.userId }
     });
-  }
-});
 
-// ========================================
-// FUNÇÕES AUXILIARES PARA PAGAMENTOS
-// ========================================
-
-async function handlePaymentApproved(paymentData) {
-  try {
-    if (paymentData && paymentData.external_id) {
-      const payment = await prisma.payment.findUnique({
-        where: { id: paymentData.external_id }
-      });
-
-      if (payment) {
-        await prisma.payment.update({
-          where: { id: payment.id },
-          data: { 
-            status: 'COMPLETED',
-            lastlinkId: paymentData.id,
-            lastlinkStatus: 'approved'
-          }
-        });
-        console.log('✅ Pagamento aprovado:', payment.id);
-      }
-    }
-  } catch (error) {
-    console.error('❌ Erro ao processar pagamento aprovado:', error.message);
-  }
-}
-
-async function handlePaymentPending(paymentData) {
-  try {
-    if (paymentData && paymentData.external_id) {
-      const payment = await prisma.payment.findUnique({
-        where: { id: paymentData.external_id }
-      });
-
-      if (payment) {
-        await prisma.payment.update({
-          where: { id: payment.id },
-          data: { 
-            status: 'PENDING',
-            lastlinkId: paymentData.id,
-            lastlinkStatus: 'pending'
-          }
-        });
-        console.log('⏳ Pagamento pendente:', payment.id);
-      }
-    }
-  } catch (error) {
-    console.error('❌ Erro ao processar pagamento pendente:', error.message);
-  }
-}
-
-async function handlePaymentFailed(paymentData) {
-  try {
-    if (paymentData && paymentData.external_id) {
-      const payment = await prisma.payment.findUnique({
-        where: { id: paymentData.external_id }
-      });
-
-      if (payment) {
-        await prisma.payment.update({
-          where: { id: payment.id },
-          data: { 
-            status: 'FAILED',
-            lastlinkId: paymentData.id,
-            lastlinkStatus: 'failed'
-          }
-        });
-        console.log('❌ Pagamento falhou:', payment.id);
-      }
-    }
-  } catch (error) {
-    console.error('❌ Erro ao processar pagamento falhou:', error.message);
-  }
-}
-
-async function handlePaymentCancelled(paymentData) {
-  try {
-    if (paymentData && paymentData.external_id) {
-      const payment = await prisma.payment.findUnique({
-        where: { id: paymentData.external_id }
-      });
-
-      if (payment) {
-        await prisma.payment.update({
-          where: { id: payment.id },
-          data: { 
-            status: 'CANCELLED',
-            lastlinkId: paymentData.id,
-            lastlinkStatus: 'cancelled'
-          }
-        });
-        console.log('🚫 Pagamento cancelado:', payment.id);
-      }
-    }
-  } catch (error) {
-    console.error('❌ Erro ao processar pagamento cancelado:', error.message);
-  }
-}
-
-// ========================================
-// GRACEFUL SHUTDOWN
-// ========================================
-
-process.on('SIGINT', async () => {
-  console.log('🔄 Encerrando servidor...');
-  await prisma.$disconnect();
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  console.log('🔄 Encerrando servidor...');
-  await prisma.$disconnect();
-  process.exit(0);
-});
-
-// ========================================
-// INICIAR SERVIDOR
-// ========================================
-
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`📡 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔗 API: http://localhost:${PORT}/api`);
-  console.log(`🔒 Webhook: http://localhost:${PORT}/api/verify/${WEBHOOK_TOKEN}`);
-  console.log(`🎯 Frontend URL: ${FRONTEND_URL}`);
-  console.log(`💖 Lovely App URL: ${LOVELY_APP_URL}`);
-});
-
-// ========================================
-// ROTAS DE PERFIL
-// ========================================
-
-// Buscar perfil do usuário
-app.get('/api/profiles/:userId', authenticateToken, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    
-    const profile = await prisma.profile.findUnique({
-      where: { userId }
-    });
-    
     if (!profile) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Perfil não encontrado' 
+      log.info(`Criando perfil padrão para usuário: ${req.user.email}`);
+      profile = await prisma.profile.create({
+        data: { userId: req.user.userId }
       });
     }
-    
-    res.json({
-      success: true,
-      data: profile
-    });
-  } catch (error) {
-    console.error('💥 Erro ao buscar perfil:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
-  }
-});
 
-// Criar perfil
-app.post('/api/profiles', authenticateToken, async (req, res) => {
-  try {
-    const { userId, partnerName, preferences, avatar } = req.body;
-    
-    const profile = await prisma.profile.create({
-      data: {
-        userId,
-        partnerName,
-        preferences: preferences || [],
-        avatar
-      }
-    });
-    
-    res.status(201).json({
-      success: true,
-      data: profile
-    });
+    log.success(`Perfil carregado para: ${req.user.email}`, profile);
+    res.json({ success: true, data: profile });
+
   } catch (error) {
-    console.error('💥 Erro ao criar perfil:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
+    log.error('Erro no perfil', error);
+    res.status(500).json({ error: 'Erro interno' });
   }
 });
 
 // Atualizar perfil
-app.put('/api/profiles/:userId', authenticateToken, async (req, res) => {
+app.put('/api/profile', auth, async (req, res) => {
   try {
-    const { userId } = req.params;
-    const updateData = req.body;
+    const { partnerName, moodToday, darinessLevel } = req.body;
     
-    const profile = await prisma.profile.update({
-      where: { userId },
-      data: updateData
+    log.info(`Atualizando perfil para usuário: ${req.user.email}`, {
+      partnerName,
+      moodToday,
+      darinessLevel
     });
-    
-    res.json({
-      success: true,
-      data: profile
+
+    const profile = await prisma.profile.upsert({
+      where: { userId: req.user.userId },
+      update: { partnerName, moodToday, darinessLevel },
+      create: { userId: req.user.userId, partnerName, moodToday, darinessLevel }
     });
+
+    log.success(`Perfil atualizado para: ${req.user.email}`, profile);
+    res.json({ success: true, data: profile });
+
   } catch (error) {
-    console.error('💥 Erro ao atualizar perfil:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
+    log.error('Erro ao atualizar perfil', error);
+    res.status(500).json({ error: 'Erro interno' });
   }
 });
 
 // ========================================
-// ROTAS DE PLANOS E ASSINATURAS
+// ASSINATURA
 // ========================================
 
-// Buscar planos disponíveis
-app.get('/api/plans', async (req, res) => {
+// Verificar assinatura do usuário
+app.get('/api/subscription', auth, async (req, res) => {
   try {
-    const plans = await prisma.plan.findMany({
-      orderBy: { price: 'asc' }
-    });
+    log.info(`Verificando assinatura para usuário: ${req.user.email}`);
     
-    res.json({
-      success: true,
-      data: plans
+    const subscription = await prisma.subscription.findUnique({
+      where: { userId: req.user.userId }
     });
-  } catch (error) {
-    console.error('💥 Erro ao buscar planos:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
-  }
-});
 
-// Buscar assinatura do usuário
-app.get('/api/subscriptions/user/:userId', authenticateToken, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    
-    const subscription = await prisma.subscription.findFirst({
-      where: { 
-        userId,
-        status: 'active'
-      },
-      include: { plan: true },
-      orderBy: { createdAt: 'desc' }
-    });
-    
     if (!subscription) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Assinatura não encontrada' 
+      log.warning(`Assinatura não encontrada para usuário: ${req.user.email}`);
+      return res.status(404).json({ error: 'Assinatura não encontrada' });
+    }
+
+    log.success(`Assinatura encontrada para: ${req.user.email}`, {
+      plano: subscription.planType,
+      status: subscription.status,
+      valor: subscription.amount
+    });
+
+    res.json({ success: true, data: subscription });
+
+  } catch (error) {
+    log.error('Erro na assinatura', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// ========================================
+// ESTATÍSTICAS DO USUÁRIO
+// ========================================
+
+// Obter estatísticas do usuário
+app.get('/api/user/stats', auth, async (req, res) => {
+  try {
+    log.info(`Carregando estatísticas para usuário: ${req.user.email}`);
+    
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      include: { 
+        profile: true,
+        subscription: true
+      }
+    });
+
+    if (!user) {
+      log.warning(`Usuário não encontrado para ID: ${req.user.userId}`);
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    // Calcular estatísticas baseadas no perfil e tempo de uso
+    const accountAge = Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+    const darinessLevel = user.profile?.darinessLevel || 1;
+    
+    // Gerar estatísticas baseadas no nível de ousadia e tempo de conta
+    const baseGames = Math.max(1, Math.floor(accountAge / 2) + darinessLevel);
+    const stats = {
+      gamesPlayed: baseGames + Math.floor(Math.random() * 5),
+      favoriteGames: Math.max(1, Math.floor(baseGames * 0.6) + Math.floor(Math.random() * 3)),
+      totalPlayTime: (baseGames * 25) + Math.floor(Math.random() * 200), // em minutos
+      currentLevel: Math.min(10, Math.floor(darinessLevel + (accountAge / 7))),
+      achievements: Math.max(1, Math.floor(baseGames * 0.8) + Math.floor(Math.random() * 8)),
+      weeklyPlayTime: Math.floor(Math.random() * 180) + 30, // 30-210 minutos
+      monthlyGames: Math.max(1, Math.floor(baseGames * 0.3) + Math.floor(Math.random() * 4)),
+      consecutiveDays: Math.min(accountAge, Math.floor(Math.random() * 14) + 1),
+      lastActivity: new Date(Date.now() - Math.floor(Math.random() * 24 * 60 * 60 * 1000)) // últimas 24h
+    };
+
+    log.success(`Estatísticas calculadas para: ${req.user.email}`, stats);
+    res.json({ success: true, data: stats });
+
+  } catch (error) {
+    log.error('Erro ao carregar estatísticas', error);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// Obter atividades recentes do usuário
+app.get('/api/user/activities', auth, async (req, res) => {
+  try {
+    log.info(`Carregando atividades recentes para usuário: ${req.user.email}`);
+    
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      include: { 
+        profile: true,
+        subscription: true
+      }
+    });
+
+    if (!user) {
+      log.warning(`Usuário não encontrado para ID: ${req.user.userId}`);
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    // Gerar atividades baseadas no perfil do usuário
+    const darinessLevel = user.profile?.darinessLevel || 1;
+    const accountAge = Math.floor((Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+    
+    const activities = [];
+    
+    // Atividade de login recente
+    activities.push({
+      id: `activity_${Date.now()}_1`,
+      action: 'Fez login no aplicativo',
+      time: 'Agora mesmo',
+      type: 'login',
+      createdAt: new Date().toISOString()
+    });
+
+    // Atividades baseadas no nível de ousadia
+    if (darinessLevel >= 3) {
+      activities.push({
+        id: `activity_${Date.now()}_2`,
+        action: 'Completou um jogo romântico',
+        time: `${Math.floor(Math.random() * 6) + 1}h atrás`,
+        type: 'game',
+        createdAt: new Date(Date.now() - Math.floor(Math.random() * 6 * 60 * 60 * 1000)).toISOString()
       });
     }
-    
-    res.json({
-      success: true,
-      data: subscription
-    });
-  } catch (error) {
-    console.error('💥 Erro ao buscar assinatura:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
-  }
-});
 
-// ========================================
-// ROTAS DE JOGOS E CONTEÚDO
-// ========================================
-
-// Buscar conteúdo de jogos por modo e plano
-app.get('/api/games/content', authenticateToken, async (req, res) => {
-  try {
-    const { mode, planType } = req.query;
-    
-    // Simulação de conteúdo baseado no plano
-    const gameContent = {
-      'no-climinha': {
-        'exploracao-guiada': [
-          {
-            id: '1',
-            title: 'Primeiros Passos',
-            description: 'Perguntas íntimas básicas para se conhecerem melhor',
-            content: 'Qual foi o momento em que você se sentiu mais conectado comigo?',
-            difficulty: 'beginner',
-            duration: 15
-          }
-        ],
-        'verdade-desafio': [
-          {
-            id: '2',
-            title: 'Verdade ou Desafio Romântico',
-            description: 'Versão suave do clássico jogo',
-            content: 'Verdade: Qual é sua fantasia romântica favorita?',
-            difficulty: 'beginner',
-            duration: 20
-          }
-        ]
-      },
-      'modo-quente': {
-        'modo-selvagem': [
-          {
-            id: '3',
-            title: 'Desafios Ousados',
-            description: 'Desafios mais intensos com temporizador',
-            content: 'Desafio: Massageie as costas do seu parceiro por 2 minutos',
-            difficulty: 'intermediate',
-            duration: 25
-          }
-        ]
-      },
-      'sem-freio': {
-        'roleplay-narracao': [
-          {
-            id: '4',
-            title: 'Cenário Completo',
-            description: 'Roleplay com narração completa',
-            content: 'Vocês estão em um spa privativo...',
-            audioUrl: '/audio/spa-scenario.mp3',
-            difficulty: 'advanced',
-            duration: 45
-          }
-        ]
-      }
-    };
-    
-    const content = gameContent[planType]?.[mode] || [];
-    
-    res.json({
-      success: true,
-      data: content
-    });
-  } catch (error) {
-    console.error('💥 Erro ao buscar conteúdo de jogos:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
-  }
-});
-
-// Buscar desafios por nível de ousadia
-app.get('/api/games/challenges', authenticateToken, async (req, res) => {
-  try {
-    const { boldnessLevel, planType } = req.query;
-    
-    // Simulação de desafios baseados no nível de ousadia
-    const challenges = [
-      {
-        id: '1',
-        title: 'Massagem Relaxante',
-        description: 'Uma massagem suave para relaxar',
-        type: 'physical',
-        boldnessRequired: parseInt(boldnessLevel) || 1,
-        duration: 10,
-        instructions: ['Prepare um ambiente calmo', 'Use óleo de massagem', 'Massageie suavemente']
-      }
-    ];
-    
-    res.json({
-      success: true,
-      data: challenges
-    });
-  } catch (error) {
-    console.error('💥 Erro ao buscar desafios:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
-  }
-});
-
-// Iniciar sessão de jogo
-app.post('/api/games/sessions', authenticateToken, async (req, res) => {
-  try {
-    const { mode, participants, duration, difficulty } = req.body;
-    
-    const session = {
-      id: `session_${Date.now()}`,
-      userId: req.user.userId,
-      mode,
-      participants: participants || ['Você', 'Parceiro(a)'],
-      startedAt: new Date().toISOString(),
-      currentStep: 1,
-      totalSteps: 10,
-      settings: {
-        duration,
-        difficulty
-      },
-      progress: {
-        challengesCompleted: 0,
-        pointsEarned: 0,
-        timeSpent: 0
-      }
-    };
-    
-    res.json({
-      success: true,
-      data: session
-    });
-  } catch (error) {
-    console.error('💥 Erro ao iniciar sessão:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
-  }
-});
-
-// ========================================
-// ROTAS DE FANTASIAS
-// ========================================
-
-// Buscar fantasias por plano
-app.get('/api/fantasies', authenticateToken, async (req, res) => {
-  try {
-    const { planType } = req.query;
-    
-    const fantasies = [
-      {
-        id: '1',
-        title: 'Jantar Romântico',
-        description: 'Uma noite especial com jantar à luz de velas',
-        category: 'romantic',
-        isPrivate: false,
-        requiredPlan: 'no-climinha'
-      },
-      {
-        id: '2',
-        title: 'Aventura Selvagem',
-        description: 'Uma experiência mais intensa e aventureira',
-        category: 'adventurous',
-        isPrivate: true,
-        requiredPlan: 'modo-quente'
-      }
-    ];
-    
-    const filteredFantasies = fantasies.filter(f => {
-      const planLevels = { 'no-climinha': 1, 'modo-quente': 2, 'sem-freio': 3 };
-      const userLevel = planLevels[planType] || 1;
-      const requiredLevel = planLevels[f.requiredPlan] || 1;
-      return userLevel >= requiredLevel;
-    });
-    
-    res.json({
-      success: true,
-      data: filteredFantasies
-    });
-  } catch (error) {
-    console.error('💥 Erro ao buscar fantasias:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
-  }
-});
-
-// ========================================
-// ROTAS DE CONQUISTAS
-// ========================================
-
-// Buscar conquistas disponíveis
-app.get('/api/achievements', authenticateToken, async (req, res) => {
-  try {
-    const { planType } = req.query;
-    
-    const achievements = [
-      {
-        id: '1',
-        title: 'Primeiro Passo',
-        description: 'Complete seu primeiro jogo',
-        icon: '🎯',
-        type: 'milestone',
-        requirements: { gamesPlayed: 1 },
-        rewards: { title: 'Iniciante', badge: '🏆' }
-      },
-      {
-        id: '2',
-        title: 'Explorador',
-        description: 'Jogue 10 jogos diferentes',
-        icon: '🗺️',
-        type: 'milestone',
-        requirements: { gamesPlayed: 10 },
-        rewards: { title: 'Explorador', unlockedContent: ['modo-especial'] }
-      }
-    ];
-    
-    res.json({
-      success: true,
-      data: achievements
-    });
-  } catch (error) {
-    console.error('💥 Erro ao buscar conquistas:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
-  }
-});
-
-// Buscar conquistas do usuário
-app.get('/api/achievements/user/:userId', authenticateToken, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    
-    // Verificar se o usuário pode acessar essas conquistas
-    if (req.user.userId !== userId) {
-      return res.status(403).json({ error: 'Acesso negado' });
+    if (darinessLevel >= 5) {
+      activities.push({
+        id: `activity_${Date.now()}_3`,
+        action: 'Desbloqueou uma nova conquista',
+        time: `${Math.floor(Math.random() * 24) + 1}h atrás`,
+        type: 'achievement',
+        createdAt: new Date(Date.now() - Math.floor(Math.random() * 24 * 60 * 60 * 1000)).toISOString()
+      });
     }
 
-    const userAchievements = await prisma.userAchievement.findMany({
-      where: { userId },
-      include: { achievement: true },
-      orderBy: { unlockedAt: 'desc' }
-    });
-    
-    res.json({ success: true, data: userAchievements });
+    if (darinessLevel >= 7) {
+      activities.push({
+        id: `activity_${Date.now()}_4`,
+        action: 'Alcançou um novo nível',
+        time: `${Math.floor(Math.random() * 48) + 1}h atrás`,
+        type: 'level',
+        createdAt: new Date(Date.now() - Math.floor(Math.random() * 48 * 60 * 60 * 1000)).toISOString()
+      });
+    }
+
+    // Atividade de sequência se o usuário tem conta há mais de 3 dias
+    if (accountAge >= 3) {
+      activities.push({
+        id: `activity_${Date.now()}_5`,
+        action: `Manteve sequência de ${Math.min(accountAge, 7)} dias`,
+        time: `${Math.floor(Math.random() * 12) + 1}h atrás`,
+        type: 'streak',
+        createdAt: new Date(Date.now() - Math.floor(Math.random() * 12 * 60 * 60 * 1000)).toISOString()
+      });
+    }
+
+    // Ordenar por data mais recente
+    activities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    log.success(`${activities.length} atividades carregadas para: ${req.user.email}`);
+    res.json({ success: true, data: activities.slice(0, 5) }); // Retornar apenas as 5 mais recentes
+
   } catch (error) {
-    console.error('💥 Erro ao buscar conquistas do usuário:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    log.error('Erro ao carregar atividades', error);
+    res.status(500).json({ error: 'Erro interno' });
   }
 });
 
 // ========================================
-// ROTAS DE WORKSPACE
+// ROTA DE REDIRECIONAMENTO INTELIGENTE
 // ========================================
 
-// Buscar workspace do usuário
-app.get('/api/workspace/:userId', authenticateToken, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    
-    // Simulação de workspace
-    const workspace = {
-      id: `workspace_${userId}`,
-      ownerId: userId,
-      name: 'Nosso Espaço',
-      participants: [
-        {
-          userId,
-          name: 'Você',
-          role: 'owner',
-          joinedAt: new Date().toISOString()
-        }
-      ],
-      settings: {
-        theme: 'romantic',
-        notifications: true,
-        privacy: 'private',
-        language: 'pt'
-      },
-      sharedFantasies: [],
-      completedChallenges: [],
-      currentStreak: 0
-    };
-    
-    res.json({
-      success: true,
-      data: workspace
-    });
-  } catch (error) {
-    console.error('💥 Erro ao buscar workspace:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Erro interno do servidor' 
-    });
+// Rota para redirecionamento inteligente de autenticação
+app.get('/auth', async (req, res) => {
+  const token = req.query.token || req.headers.authorization?.split(' ')[1];
+  
+  if (!token) {
+    // Sem token, redirecionar para página de login do front
+    log.redirect('Sem token -> Redirecionando para login do front');
+    return res.redirect(`${FRONTEND_URL}/auth`);
   }
-});
 
-// ===== ROTAS DOS MODOS DE JOGO =====
-
-// Buscar modos de jogo disponíveis
-app.get('/api/game-modes', async (req, res) => {
   try {
-    const gameModes = await prisma.gameMode.findMany({
-      orderBy: { requiredPlanLevel: 'asc' }
-    });
+    // Verificar se o token é válido
+    const decoded = jwt.verify(token, JWT_SECRET);
     
-    res.json(gameModes);
-  } catch (error) {
-    console.error('💥 Erro ao buscar modos de jogo:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// Buscar jogos clássicos
-app.get('/api/games/classic', authenticateToken, async (req, res) => {
-  try {
+    // Buscar dados completos do usuário
     const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-      include: {
-        subscriptions: {
-          where: { status: 'active' },
-          include: { plan: true },
-          orderBy: { createdAt: 'desc' },
-          take: 1
-        }
-      }
+      where: { id: decoded.userId },
+      include: { subscription: true }
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
+      log.redirect('Usuário não encontrado -> Redirecionando para login do front');
+      return res.redirect(`${FRONTEND_URL}/auth`);
     }
 
-    // Determinar nível do plano
-    let planLevel = 1;
-    if (user.subscriptions && user.subscriptions.length > 0) {
-      const subscription = user.subscriptions[0];
-      if (subscription.plan) {
-        switch (subscription.plan.name.toLowerCase()) {
-          case 'no climinha':
-            planLevel = 1;
-            break;
-          case 'modo quente':
-            planLevel = 2;
-            break;
-          case 'sem freio':
-            planLevel = 3;
-            break;
-        }
-      }
-    }
+    // Dados do usuário para incluir na URL
+    const userData = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      plan: user.subscription?.planType || 'free',
+      hasActiveSubscription: user.subscription?.status === 'ACTIVE',
+      darinessLevel: user.darinessLevel || 5,
+      partnerName: user.partnerName || 'Meu Amor'
+    };
 
-    const games = await prisma.game.findMany({
-      where: {
-        requiredPlanLevel: {
-          lte: planLevel
-        }
-      },
-      orderBy: { name: 'asc' }
-    });
+    // Token válido, redirecionar para o LovelyApp COM os parâmetros
+    const redirectUrl = `http://localhost:3001/?token=${token}&user=${encodeURIComponent(JSON.stringify(userData))}`;
     
-    res.json({ success: true, data: games });
+    log.redirect(`Token válido para ${decoded.email} -> Redirecionando para LovelyApp com parâmetros`);
+    console.log(`[${new Date().toLocaleString('pt-BR')}] 🔄 URL de redirecionamento: ${redirectUrl}`);
+    
+    return res.redirect(redirectUrl);
+    
   } catch (error) {
-    console.error('💥 Erro ao buscar jogos:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    // Token inválido, redirecionar para página de login do front
+    log.redirect('Token inválido -> Redirecionando para login do front');
+    return res.redirect(`${FRONTEND_URL}/auth`);
   }
 });
 
-// Buscar fantasias
-app.get('/api/fantasies', authenticateToken, async (req, res) => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-      include: {
-        subscriptions: {
-          where: { status: 'active' },
-          include: { plan: true },
-          orderBy: { createdAt: 'desc' },
-          take: 1
-        }
-      }
-    });
-
-    if (!user) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
-    }
-
-    // Determinar nível do plano
-    let planLevel = 1;
-    if (user.subscriptions && user.subscriptions.length > 0) {
-      const subscription = user.subscriptions[0];
-      if (subscription.plan) {
-        switch (subscription.plan.name.toLowerCase()) {
-          case 'no climinha':
-            planLevel = 1;
-            break;
-          case 'modo quente':
-            planLevel = 2;
-            break;
-          case 'sem freio':
-            planLevel = 3;
-            break;
-        }
-      }
-    }
-
-    const fantasies = await prisma.fantasy.findMany({
-      where: {
-        requiredPlanLevel: {
-          lte: planLevel
-        }
-      },
-      orderBy: { name: 'asc' }
-    });
-    
-    res.json({ success: true, data: fantasies });
-  } catch (error) {
-    console.error('💥 Erro ao buscar fantasias:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// Buscar conquistas disponíveis
-app.get('/api/achievements', authenticateToken, async (req, res) => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-      include: {
-        subscriptions: {
-          where: { status: 'active' },
-          include: { plan: true },
-          orderBy: { createdAt: 'desc' },
-          take: 1
-        }
-      }
-    });
-
-    if (!user) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
-    }
-
-    // Determinar nível do plano
-    let planLevel = 1;
-    if (user.subscriptions && user.subscriptions.length > 0) {
-      const subscription = user.subscriptions[0];
-      if (subscription.plan) {
-        switch (subscription.plan.name.toLowerCase()) {
-          case 'no climinha':
-            planLevel = 1;
-            break;
-          case 'modo quente':
-            planLevel = 2;
-            break;
-          case 'sem freio':
-            planLevel = 3;
-            break;
-        }
-      }
-    }
-
-    const achievements = await prisma.achievement.findMany({
-      where: {
-        requiredPlanLevel: {
-          lte: planLevel
-        }
-      },
-      orderBy: { name: 'asc' }
-    });
-    
-    res.json({ success: true, data: achievements });
-  } catch (error) {
-    console.error('💥 Erro ao buscar conquistas:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
+// Iniciar servidor
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('\n' + '='.repeat(60));
+  console.log(`${colors.bright}${colors.green}🚀 LovelyApp Backend Iniciado com Sucesso!${colors.reset}`);
+  console.log('='.repeat(60));
+  console.log(`${colors.cyan}📡 Servidor:${colors.reset} http://localhost:${PORT}`);
+  console.log(`${colors.magenta}🔔 Webhook:${colors.reset} http://localhost:${PORT}/api/webhook/perfect-pay`);
+  console.log(`${colors.blue}🔐 API Auth:${colors.reset} http://localhost:${PORT}/api/auth`);
+  console.log(`${colors.yellow}🔄 Redirect:${colors.reset} http://localhost:${PORT}/auth`);
+  console.log(`${colors.green}💚 Health:${colors.reset} http://localhost:${PORT}/health`);
+  console.log('='.repeat(60));
+  console.log(`${colors.bright}${colors.white}📊 Logs em tempo real ativados!${colors.reset}\n`);
 }); 

@@ -29,20 +29,15 @@ export default function AuthPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validação básica
-    if (!email || !password) {
-      setError('Email e senha são obrigatórios');
-      return;
-    }
-
-    // Validação de email
-    if (!validateEmail(email)) {
-      setError('Email inválido');
-      return;
-    }
-
-    // Validação de senha
+    // Validações básicas
+    const emailError = !validateEmail(email);
     const passwordError = validatePassword(password);
+    
+    if (emailError) {
+      setError('Por favor, insira um e-mail válido');
+      return;
+    }
+    
     if (passwordError) {
       setError(passwordError);
       return;
@@ -53,7 +48,7 @@ export default function AuthPage() {
     
     try {
       console.log('Tentando fazer login com:', { email, password });
-      await signIn(email, password);
+      await signIn({ email, password });
       console.log('Login realizado com sucesso!');
       // O redirecionamento será feito automaticamente pelo AuthContext
     } catch (err) {

@@ -1,87 +1,59 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { API_ROUTES } from '@/config/api';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-// Tipos básicos necessários apenas para tipagem no frontend
 interface User {
   id: string;
   email: string;
   name: string;
 }
 
-interface AuthContextData {
+interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (credentials: { email: string; password: string }) => Promise<void>;
+  signUp: (userData: { email: string; password: string; name: string }) => Promise<void>;
   signOut: () => void;
+  isLoading: boolean;
 }
 
-const AuthContext = createContext<AuthContextData>({} as AuthContextData);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const signIn = async (email: string, password: string) => {
-    setLoading(true);
-    
+  const signIn = async (credentials: { email: string; password: string }) => {
+    setIsLoading(true);
     try {
-      console.log('🔄 Iniciando login...');
-      console.log('📧 Email:', email);
-      
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
-      console.log('🔗 URL da API:', `${API_URL}/api/auth/login`);
-      
-      const requestData = { email, password };
-      console.log('📦 Dados enviados:', requestData);
-
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData),
+      // Simular autenticação
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setUser({
+        id: '1',
+        email: credentials.email,
+        name: 'Usuário Teste'
       });
-
-      console.log('📊 Status da resposta:', response.status);
-      console.log('✅ Response OK:', response.ok);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro no login');
-      }
-
-      const data = await response.json();
-      console.log('📋 Dados recebidos:', data);
-
-      if (data.success && data.data) {
-        console.log('✅ Login realizado com sucesso!');
-        console.log('👤 Usuário logado:', data.data.user);
-        console.log('🔑 Token JWT:', data.data.token);
-        
-        // REDIRECIONAMENTO SIMPLES E DIRETO
-        const redirectUrl = data.data.redirectUrl;
-        console.log('🔄 URL de redirecionamento:', redirectUrl);
-        
-        if (redirectUrl) {
-          console.log('🚀 Redirecionando AGORA para:', redirectUrl);
-          // Redirecionamento imediato e simples
-          window.location.replace(redirectUrl);
-        } else {
-          throw new Error('URL de redirecionamento não fornecida pelo backend');
-        }
-      } else {
-        throw new Error('Resposta inválida do servidor');
-      }
-      
     } catch (error) {
-      console.error('💥 Erro detalhado no login:', error);
-      setLoading(false);
-      throw error;
+      throw new Error('Erro ao fazer login');
+    } finally {
+      setIsLoading(false);
     }
-    // Não definimos setLoading(false) aqui porque vamos redirecionar
+  };
+
+  const signUp = async (userData: { email: string; password: string; name: string }) => {
+    setIsLoading(true);
+    try {
+      // Simular registro
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setUser({
+        id: '1',
+        email: userData.email,
+        name: userData.name
+      });
+    } catch (error) {
+      throw new Error('Erro ao criar conta');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const signOut = () => {
@@ -91,10 +63,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user,
-      isAuthenticated: !!user,
-      loading,
       signIn,
-      signOut
+      signUp,
+      signOut,
+      isLoading
     }}>
       {children}
     </AuthContext.Provider>

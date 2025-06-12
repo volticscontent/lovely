@@ -4,25 +4,32 @@ import React, { useRef, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import Cookies from 'js-cookie';
+import { debounce, throttle } from '@/utils/performance';
+import Image from 'next/image';
 
 export default function BarraNavegacao() {
   const video0Ref = useRef<HTMLVideoElement>(null);
   const { user, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // Hook para garantir hidratação consistente
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Construir URL do lovelyapp para usuário logado
   const getUserDashboardUrl = () => {
-    if (user?.id) {
-      const token = Cookies.get('auth_token');
-      // Assumir plano padrão se não especificado
-      const userPlan = 'no-climinha'; // Pode ser obtido do contexto se disponível
-      
-      if (token) {
-        return `http://localhost:3001/${user.id}/${userPlan}?token=${token}`;
-      }
-      return `http://localhost:3001/${user.id}/${userPlan}`;
+    if (!isClient || !user?.id) return '/auth';
+    
+    const token = Cookies.get('auth_token');
+    // Assumir plano padrão se não especificado
+    const userPlan = 'no-climinha'; // Pode ser obtido do contexto se disponível
+    
+    if (token) {
+      return `http://localhost:3001/${user.id}/${userPlan}?token=${token}`;
     }
-    return '/auth';
+    return `http://localhost:3001/${user.id}/${userPlan}`;
   };
 
   // Função para fazer logout
@@ -45,13 +52,13 @@ export default function BarraNavegacao() {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  // Fechar menu mobile quando pressionar ESC
+  // Fechar menu mobile quando pressionar ESC - com debounce
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleEscape = debounce((e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsMobileMenuOpen(false);
       }
-    };
+    }, 150);
 
     if (isMobileMenuOpen) {
       document.addEventListener('keydown', handleEscape);
@@ -68,7 +75,9 @@ export default function BarraNavegacao() {
   }, [isMobileMenuOpen]);
 
   useEffect(() => {
-    // Detectar se é dispositivo móvel
+    if (!isClient) return;
+    
+    // Detectar se é dispositivo móvel apenas no cliente
     const isMobile = /iphone|ipad|ipod|android|blackberry|mini|windows\sce|palm/i.test(navigator.userAgent.toLowerCase());
     
     // Função para garantir que o vídeo seja reproduzido
@@ -156,7 +165,7 @@ export default function BarraNavegacao() {
         video0Ref.current.removeEventListener('error', handleError);
       }
     };
-  }, []);
+  }, [isClient]);
 
   // Debug do estado
   useEffect(() => {
@@ -199,8 +208,7 @@ export default function BarraNavegacao() {
                 }}
               >
                 {/* Fallback para navegadores que não suportam WebM */}
-                <source src="/images/logo.png" type="image/png" />
-                Seu navegador não suporta vídeos.
+                <span className="text-white text-xs">Logo</span>
               </video>
             </div>
             <div className="text-white font-bold text-3xl md:text-4xl tracking-wide">
@@ -211,23 +219,23 @@ export default function BarraNavegacao() {
           
           {/* Menu Desktop */}
           <div className="hidden md:flex items-center space-x-6">
-            <Link href="/" className="text-white hover:text-red-400 transition-colors">
+            <Link href="/" className="text-white hover:text-red-400 transition-colors" suppressHydrationWarning>
               Surpreenda
             </Link>
-            <Link href="/planos" className="text-white hover:text-red-400 transition-colors">
+            <Link href="/planos" className="text-white hover:text-red-400 transition-colors" suppressHydrationWarning>
               Planos
             </Link>
-            <Link href="/vendas#faq" className="text-white hover:text-red-400 transition-colors">
+            <Link href="/vendas#faq" className="text-white hover:text-red-400 transition-colors" suppressHydrationWarning>
               F.A.Q
             </Link>
-            <Link href="/afiliados" className="text-white hover:text-red-400 transition-colors">
+            <Link href="/afiliados" className="text-white hover:text-red-400 transition-colors" suppressHydrationWarning>
               Programa de afiliados
             </Link>
           </div>
           
           <div className="flex items-center space-x-4 py-1 md:py-0">
             {/* Área do usuário */}
-            {user ? (
+            {isClient && user ? (
               <div className="flex items-center space-x-3">
                 {/* Link para dashboard */}
                 <a href={getUserDashboardUrl()} className="text-white hover:text-red-400 p-1">
@@ -251,8 +259,8 @@ export default function BarraNavegacao() {
                   </svg>
                 </button>
               </div>
-            ) : (
-              <Link href="/auth" className="text-white hover:text-red-400 p-1">
+            ) : isClient ? (
+              <Link href="/auth" className="text-white hover:text-red-400 p-1" suppressHydrationWarning>
                 <div className="flex items-center gap-2">
                   <span className="hidden md:block text-sm">Entrar</span>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 md:h-5 md:w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -260,6 +268,16 @@ export default function BarraNavegacao() {
                   </svg>
                 </div>
               </Link>
+            ) : (
+              // Placeholder durante hidratação
+              <div className="text-white p-1">
+                <div className="flex items-center gap-2">
+                  <span className="hidden md:block text-sm">...</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 md:h-5 md:w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
             )}
             
             {/* Botão Menu Mobile - Versão Simplificada */}
@@ -286,7 +304,7 @@ export default function BarraNavegacao() {
       </nav>
 
       {/* Menu Mobile - Versão Simplificada */}
-      {isMobileMenuOpen && (
+      {isClient && isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black z-[9999] md:hidden"
           style={{
@@ -336,6 +354,7 @@ export default function BarraNavegacao() {
                 className="group flex items-center space-x-4 text-white hover:text-red-400 transition-all duration-300"
                 onClick={closeMobileMenu}
                 style={{ color: 'white' }}
+                suppressHydrationWarning
               >
                 <div className="w-12 h-12 bg-gray-800 group-hover:bg-red-600 rounded-full flex items-center justify-center transition-all duration-300">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -353,6 +372,7 @@ export default function BarraNavegacao() {
                 className="group flex items-center space-x-4 text-white hover:text-red-400 transition-all duration-300"
                 onClick={closeMobileMenu}
                 style={{ color: 'white' }}
+                suppressHydrationWarning
               >
                 <div className="w-12 h-12 bg-gray-800 group-hover:bg-red-600 rounded-full flex items-center justify-center transition-all duration-300">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -370,6 +390,7 @@ export default function BarraNavegacao() {
                 className="group flex items-center space-x-4 text-white hover:text-red-400 transition-all duration-300"
                 onClick={closeMobileMenu}
                 style={{ color: 'white' }}
+                suppressHydrationWarning
               >
                 <div className="w-12 h-12 bg-gray-800 group-hover:bg-red-600 rounded-full flex items-center justify-center transition-all duration-300">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -387,6 +408,7 @@ export default function BarraNavegacao() {
                 className="group flex items-center space-x-4 text-white hover:text-red-400 transition-all duration-300"
                 onClick={closeMobileMenu}
                 style={{ color: 'white' }}
+                suppressHydrationWarning
               >
                 <div className="w-12 h-12 bg-gray-800 group-hover:bg-red-600 rounded-full flex items-center justify-center transition-all duration-300">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -448,6 +470,7 @@ export default function BarraNavegacao() {
                   className="block w-full bg-red-600 hover:bg-red-700 text-white text-center py-4 px-6 rounded-2xl transition-all duration-300 font-bold text-lg"
                   onClick={closeMobileMenu}
                   style={{ backgroundColor: '#dc2626', color: 'white' }}
+                  suppressHydrationWarning
                 >
                   💖 Entrar / Cadastrar
                 </Link>

@@ -1,94 +1,12 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import type { RoletaDoDesejoRef } from './jogosImage/RoletaDoDesejo';
-
-const RoletaDoDesejo = dynamic(
-  () => import('./jogosImage/RoletaDoDesejo'),
-  { ssr: false }
-);
-
-const CartasConversa = dynamic(
-  () => import('./jogosImage/CartasConversa'),
-  { ssr: false }
-);
-
-interface GameState {
-  isSpinning: boolean;
-  hasSelectedGender: boolean;
-  isFlipping: boolean;
-  isLoading: boolean;
-  error: string | null;
-}
-
-const useGameState = () => {
-  const [state, setState] = useState<GameState>({
-    isSpinning: false,
-    hasSelectedGender: false,
-    isFlipping: false,
-    isLoading: false,
-    error: null
-  });
-
-  const updateState = (newState: Partial<GameState>) => {
-    setState(prev => ({ ...prev, ...newState }));
-  };
-
-  const handleSpinStateChange = useCallback((spinning: boolean) => {
-    updateState({ 
-      isSpinning: spinning,
-      isLoading: spinning,
-      error: null 
-    });
-  }, []);
-
-  const handleGenderSelect = useCallback(() => {
-    updateState({ 
-      hasSelectedGender: true,
-      error: null 
-    });
-  }, []);
-
-  const handleReset = useCallback(() => {
-    updateState({
-      isSpinning: false,
-      hasSelectedGender: false,
-      isFlipping: false,
-      isLoading: false,
-      error: null
-    });
-  }, []);
-
-  const handleCardFlip = useCallback(() => {
-    updateState({ isFlipping: true });
-    setTimeout(() => {
-      updateState({ isFlipping: false });
-    }, 200);
-  }, []);
-
-  return {
-    state,
-    handlers: {
-      handleSpinStateChange,
-      handleGenderSelect,
-      handleReset,
-      handleCardFlip
-    }
-  };
-};
 
 export default function TemasSection() {
-  const roletaRef = useRef<RoletaDoDesejoRef>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [rotations, setRotations] = useState({ card1: { x: 0, y: 0 }, card2: { x: 0, y: 0 } });
-  
-  const { 
-    state: { isSpinning, hasSelectedGender, isFlipping, isLoading, error },
-    handlers
-  } = useGameState();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -102,7 +20,7 @@ export default function TemasSection() {
   }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>, cardId: 'card1' | 'card2') => {
-    if (isSpinning || isMobile) return;
+    if (isMobile) return;
 
     const card = e.currentTarget;
     const rect = card.getBoundingClientRect();
@@ -124,7 +42,7 @@ export default function TemasSection() {
         [cardId]: { x: rotateX, y: rotateY }
       };
     });
-  }, [isSpinning, isMobile]);
+  }, [isMobile]);
 
   const handleMouseLeave = useCallback((cardId: 'card1' | 'card2') => {
     setRotations(prev => ({
@@ -134,123 +52,134 @@ export default function TemasSection() {
   }, []);
 
   const getCardTransform = useCallback((cardId: 'card1' | 'card2') => {
-    if (isSpinning || isMobile) return 'none';
+    if (isMobile) return 'none';
     return `rotateX(${rotations[cardId].x}deg) rotateY(${rotations[cardId].y}deg)`;
-  }, [rotations, isSpinning, isMobile]);
+  }, [rotations, isMobile]);
 
   return (
-    <section className="w-full flex flex-col items-center justify-center py-12" data-sentry-component="Themes">
-      {error && (
-        <div className="w-full max-w-7xl mx-auto px-4 mb-4">
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-red-500 text-sm">
-            {error}
+    <section className="w-full min-h-screen bg-black relative overflow-hidden">
+      {/* Background com efeito parallax */}
+      <div className="absolute inset-0">
+        <Image
+          src="https://pub-9e19518e85994c27a69dd5b29e669dca.r2.dev/gif1.gif"
+          alt="Background"
+          fill
+          style={{ objectFit: 'cover' }}
+          priority={false}
+          quality={85}
+          className="opacity-30"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
+      </div>
+
+      <div className="relative z-10 container mx-auto px-4 py-16 flex flex-col lg:flex-row min-h-screen">
+        {/* Lado Esquerdo - Temas */}
+        <div className="w-full lg:w-1/2 flex flex-col justify-center mb-8 lg:mb-0">
+          <div className="text-center lg:text-left space-y-6">
+            <div className="space-y-4">
+              <h2 className="text-4xl lg:text-6xl font-bold text-white leading-tight">
+                <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  Temas
+                </span>
+                <br />
+                <span className="text-white">
+                  Românticos
+                </span>
+              </h2>
+              
+              <p className="text-xl lg:text-2xl text-gray-300 max-w-2xl mx-auto lg:mx-0">
+                Explore diferentes cenários e aventuras criadas especialmente para casais
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
+              <span className="px-4 py-2 bg-pink-500/20 text-pink-300 rounded-full text-sm font-medium border border-pink-500/30">
+                💕 Romance
+              </span>
+              <span className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-full text-sm font-medium border border-purple-500/30">
+                🔥 Aventura
+              </span>
+              <span className="px-4 py-2 bg-blue-500/20 text-blue-300 rounded-full text-sm font-medium border border-blue-500/30">
+                🌟 Diversão
+              </span>
+            </div>
+
+            <div className="pt-6">
+              <Link 
+                href="/planos"
+                className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold rounded-xl shadow-2xl hover:from-pink-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
+              >
+                Explorar Temas
+                <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </Link>
+            </div>
           </div>
         </div>
-      )}
-      <div className="w-full max-w-7xl mx-auto px-4">
-        <h2 className="bg-clip-text text-transparent text-center bg-gradient-to-b from-neutral-200 to-white text-3xl lg:text-5xl font-sans py-2 relative z-20 font-bold tracking-tight">
-          Os mais jogados
-        </h2>
-        <p className="max-w-xl mx-auto text-center text-base md:text-lg text-neutral-200 mb-8">
-          Divertidos, personalizados e criativos! Esses são os preferidos pelos nossos usuários.
-        </p>
-        {/* Grid sem container de scroll - sem overflow */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full" style={{ pointerEvents: 'auto', touchAction: 'pan-y' }}>
-          {/* Card Roleta do Desejo */}
-          <div className="flex items-center justify-center" style={{ perspective: '1000px', overflow: 'visible', pointerEvents: 'auto', touchAction: 'pan-y' }}>
-            <div 
-              className={`flex items-stretch justify-center relative transition-all duration-200 ease-linear inter-var w-full h-full ${isLoading ? 'opacity-70' : ''}`}
-              style={{ 
-                transformStyle: 'preserve-3d', 
-                transform: isMobile ? 'none' : getCardTransform('card1'),
-                transition: 'transform 0.2s ease-out',
-                overflow: 'visible',
-                pointerEvents: 'auto',
-                touchAction: 'pan-y'
+
+        {/* Lado Direito - Preview dos Temas */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center">
+          <div className="relative w-full max-w-md mx-auto" style={{ perspective: '1000px' }}>
+            
+            {/* Card Principal - Tema Romântico */}
+            <div
+              className="w-full aspect-[3/4] relative"
+              onMouseMove={(e) => handleMouseMove(e, 'card1')}
+              onMouseLeave={() => handleMouseLeave('card1')}
+              style={{
+                transform: getCardTransform('card1'),
+                transformStyle: 'preserve-3d',
+                transition: 'transform 0.1s ease-out'
               }}
-              onMouseMove={(e) => !isMobile && handleMouseMove(e, 'card1')}
-              onMouseLeave={() => !isMobile && handleMouseLeave('card1')}
             >
-              <div className="[transform-style:preserve-3d] relative group/card hover:shadow-2xl hover:shadow-emerald-500/[0.1] bg-black border-white/[0.2] w-full sm:w-[36rem] rounded-xl p-8 border flex flex-col" style={{ overflow: 'visible', height: 'auto', pointerEvents: 'auto', touchAction: 'pan-y' }}>
-                <div className="relative flex-none" style={{ transform: isMobile ? 'none' : 'translateZ(50px)', pointerEvents: 'auto' }}>
-                  <h3 className="text-white text-lg font-medium bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-purple-500">Roleta do Desejo</h3>
-                  <p className="text-white/60 text-sm mt-1">
-                    Gire a roleta e descubra uma posição aleatória para apimentar o momento.
+              <div className="w-full h-full rounded-2xl overflow-hidden shadow-2xl relative">
+                <Image
+                  src="https://pub-9e19518e85994c27a69dd5b29e669dca.r2.dev/gif2.gif"
+                  alt="Tema Romântico"
+                  fill
+                  style={{ objectFit: 'cover' }}
+                  className="transition-transform duration-500 hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                  <h3 className="text-2xl font-bold mb-2">Romance Clássico</h3>
+                  <p className="text-gray-200 text-sm">
+                    Cenários elegantes e românticos para momentos especiais
                   </p>
-                </div>
-                <div className="relative mt-6 flex-1 flex flex-col items-center justify-center py-4" style={{ transform: isMobile ? 'none' : 'translateZ(30px)', pointerEvents: 'auto', touchAction: 'pan-y' }}>
-                  <div className="w-full max-w-[340px] mx-auto" style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}>
-                    <RoletaDoDesejo 
-                      ref={roletaRef}
-                      isMobile={isMobile}
-                      onSpinningChange={handlers.handleSpinStateChange}
-                      onGenderSelect={handlers.handleGenderSelect}
-                      onReset={handlers.handleReset}
-                    />
-                  </div>
-                  
-                  {/* Botões nos cantos com efeito 3D - só aparecem quando jogador foi selecionado */}
-                  {hasSelectedGender && (
-                    <div className="absolute bottom-2 left-2 right-2 flex justify-between items-end" style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}>
-                      <button
-                        onClick={() => roletaRef.current?.resetGame()}
-                        className={`text-white/70 font-medium transition-all duration-300 active:scale-95 cursor-pointer relative z-50 ${isMobile ? 'text-xs px-2 py-1' : 'text-sm px-3 py-1.5'} rounded-md hover:text-white/90 hover:bg-white/5`}
-                        style={{ transform: isMobile ? 'none' : 'translateZ(40px) rotateX(-5deg)', pointerEvents: 'auto', touchAction: 'manipulation' }}
-                        disabled={isSpinning}
-                      >
-                        Trocar jogador
-                      </button>
-                      <button
-                        onClick={() => roletaRef.current?.handleSpinClick()}
-                        className={`${isMobile ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'} rounded-md text-white font-semibold transition-all duration-300 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 active:scale-95 cursor-pointer relative z-50 ${
-                          isSpinning 
-                            ? 'bg-gray-500/50 cursor-not-allowed backdrop-blur-sm' 
-                            : 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600'
-                        }`}
-                        style={{ transform: isMobile ? 'none' : 'translateZ(40px) rotateX(-5deg)', pointerEvents: 'auto', touchAction: 'manipulation' }}
-                        disabled={isSpinning}
-                      >
-                        {isSpinning ? 'Girando...' : 'Girar roleta! 🎯'}
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Card Cartas de Conversa */}
-          <div className="flex items-center justify-center" style={{ perspective: '1000px', overflow: 'visible', pointerEvents: 'auto', touchAction: 'pan-y' }}>
-            <div 
-              className={`flex items-stretch justify-center relative transition-all duration-200 ease-linear inter-var w-full h-full ${(isSpinning || isMobile || isFlipping) ? '' : ''}`}
-              style={{ 
-                transformStyle: 'preserve-3d', 
-                transform: isMobile ? 'none' : getCardTransform('card2'),
-                transition: 'transform 0.2s ease-out',
-                overflow: 'visible',
-                pointerEvents: 'auto',
-                touchAction: 'pan-y'
+            {/* Card Secundário - Tema Aventura */}
+            <div
+              className="absolute -bottom-8 -right-8 w-3/4 aspect-[3/4] z-10"
+              onMouseMove={(e) => handleMouseMove(e, 'card2')}
+              onMouseLeave={() => handleMouseLeave('card2')}
+              style={{
+                transform: getCardTransform('card2'),
+                transformStyle: 'preserve-3d',
+                transition: 'transform 0.1s ease-out'
               }}
-              onMouseMove={(e) => !isMobile && handleMouseMove(e, 'card2')}
-              onMouseLeave={() => !isMobile && handleMouseLeave('card2')}
             >
-              <div className="[transform-style:preserve-3d] relative group/card hover:shadow-2xl hover:shadow-emerald-500/[0.1] bg-black border-white/[0.2] w-full sm:w-[36rem] rounded-xl p-8 border flex flex-col" style={{ overflow: 'visible', height: 'auto', pointerEvents: 'auto', touchAction: 'pan-y' }}>
-                <div className="relative flex-none" style={{ transform: isMobile ? 'none' : 'translateZ(50px)', pointerEvents: 'auto' }}>
-                  <div className="text-xl font-bold text-white bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-purple-500">
-                    Date 10
-                  </div>
-                  <p className="text-white/60 text-sm mt-1 max-w-sm">
-                    Tire uma carta de até 10 assuntos sobre vocês e aprofunde sua conexão com perguntas especiais! Uma ótima pedida para se conhecer melhor em um encontro.
+              <div className="w-full h-full rounded-2xl overflow-hidden shadow-2xl relative">
+                <Image
+                  src="https://pub-9e19518e85994c27a69dd5b29e669dca.r2.dev/gif3.gif"
+                  alt="Tema Aventura"
+                  fill
+                  style={{ objectFit: 'cover' }}
+                  className="transition-transform duration-500 hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-purple-900/80 via-transparent to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                  <h3 className="text-lg font-bold mb-1">Aventura & Fantasia</h3>
+                  <p className="text-gray-200 text-xs">
+                    Explore novos horizontes juntos
                   </p>
-                </div>
-
-                <div className="relative mt-6 flex-1 flex items-center justify-center" style={{ transform: isMobile ? 'none' : 'translateZ(30px)', overflow: 'visible', pointerEvents: 'auto', touchAction: 'pan-y' }}>
-                  <div className={`${isMobile ? 'w-full max-w-[280px]' : 'w-full max-w-[400px]'} mx-auto`} style={{ overflow: 'visible', pointerEvents: 'auto', touchAction: 'manipulation' }}>
-                    <CartasConversa onCardFlip={handlers.handleCardFlip} isMobile={isMobile} />
-                  </div>
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </div>

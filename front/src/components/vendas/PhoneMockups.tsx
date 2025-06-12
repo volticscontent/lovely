@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from 'react';
+import Image from 'next/image';
 
 // Hook para detectar se é dispositivo móvel
 function useIsMobile() {
@@ -20,9 +21,9 @@ function useIsMobile() {
 }
 
 export default function PhoneMockups() {
-  const image1Ref = useRef<HTMLImageElement>(null);
-  const image2Ref = useRef<HTMLImageElement>(null);
-  const image3Ref = useRef<HTMLImageElement>(null);
+  const image1Ref = useRef<HTMLImageElement | null>(null);
+  const image2Ref = useRef<HTMLImageElement | null>(null);
+  const image3Ref = useRef<HTMLImageElement | null>(null);
   
   const isMobile = useIsMobile();
   
@@ -51,10 +52,13 @@ export default function PhoneMockups() {
           boxShadow: 'rgba(0, 0, 0, 0.1) 0px 4px 6px, rgba(0, 0, 0, 0.08) 0px 1px 3px'
         }}
       >
-        <img 
+        <Image 
           alt="mockup" 
           className="absolute z-50 w-full h-full" 
           src="/images/mockup.webp"
+          fill
+          priority
+          sizes="(max-width: 768px) 100px, 220px"
         />
         <div className="relative w-[97%] h-[99%] rounded-2xl overflow-hidden cursor-not-allowed z-40">
           {gifError.gif1 ? (
@@ -62,13 +66,16 @@ export default function PhoneMockups() {
               <span className="text-white text-xs font-medium">Demonstração 1</span>
             </div>
           ) : (
-            <img 
+            <Image 
               ref={image1Ref}
               alt="Demonstração do app - Tela 1"
               className="absolute top-0.5 left-0.5 lg:left-1 lg:top-2 rounded-md lg:rounded-3xl w-full h-full object-cover"
               src={gifUrls.gif1}
-              loading={isMobile ? "lazy" : "eager"}
+              fill
+              priority={!isMobile}
+              sizes="(max-width: 768px) 100px, 220px"
               onError={() => handleImageError('gif1')}
+              unoptimized
             />
           )}
         </div>
@@ -82,10 +89,13 @@ export default function PhoneMockups() {
           boxShadow: 'rgba(0, 0, 0, 0.1) 0px 4px 6px, rgba(0, 0, 0, 0.08) 0px 1px 3px'
         }}
       >
-        <img 
+        <Image 
           alt="mockup" 
           className="absolute z-50 w-full h-full" 
           src="/images/mockup.webp"
+          fill
+          priority
+          sizes="(max-width: 768px) 100px, 220px"
         />
         <div className="relative w-[97%] h-[99%] rounded-2xl overflow-hidden cursor-not-allowed z-40">
           {gifError.gif2 ? (
@@ -93,13 +103,16 @@ export default function PhoneMockups() {
               <span className="text-white text-xs font-medium">Demonstração 2</span>
             </div>
           ) : (
-            <img 
+            <Image 
               ref={image2Ref}
               alt="Demonstração do app - Tela 2"
               className="absolute top-0.5 left-0.5 lg:left-1 lg:top-2 rounded-md lg:rounded-3xl w-full h-full object-cover"
               src={gifUrls.gif2}
-              loading={isMobile ? "lazy" : "eager"}
+              fill
+              priority={!isMobile}
+              sizes="(max-width: 768px) 100px, 220px"
               onError={() => handleImageError('gif2')}
+              unoptimized
             />
           )}
         </div>
@@ -113,10 +126,13 @@ export default function PhoneMockups() {
           boxShadow: 'rgba(0, 0, 0, 0.1) 0px 4px 6px, rgba(0, 0, 0, 0.08) 0px 1px 3px'
         }}
       >
-        <img 
+        <Image 
           alt="mockup" 
           className="absolute z-50 w-full h-full" 
           src="/images/mockup.webp"
+          fill
+          priority
+          sizes="(max-width: 768px) 100px, 220px"
         />
         <div className="relative w-[97%] h-[99%] rounded-2xl overflow-hidden cursor-not-allowed z-40">
           {gifError.gif3 ? (
@@ -124,13 +140,15 @@ export default function PhoneMockups() {
               <span className="text-white text-xs font-medium">Demonstração 3</span>
             </div>
           ) : (
-            <img 
+            <Image 
               ref={image3Ref}
               alt="Demonstração do app - Tela 3"
               className="absolute top-0.5 left-0.5 lg:left-1 lg:top-2 rounded-md lg:rounded-3xl w-full h-full object-cover"
               src={gifUrls.gif3}
-              loading={isMobile ? "lazy" : "eager"}
+              fill
+              sizes="(max-width: 768px) 100px, 220px"
               onError={() => handleImageError('gif3')}
+              unoptimized
             />
           )}
         </div>

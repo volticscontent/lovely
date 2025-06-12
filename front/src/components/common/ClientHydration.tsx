@@ -2,100 +2,38 @@
 
 import { useEffect, useState } from 'react';
 
-// Declarações globais para TypeScript
-declare global {
-  interface Window {
-    isHydrated?: boolean;
-    hydrationTimeout?: NodeJS.Timeout;
-    hydrationFailed?: boolean;
-    isIPhone?: boolean;
-  }
-}
-
 interface ClientHydrationProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
 }
 
-export default function ClientHydration({ children, fallback }: ClientHydrationProps) {
-  const [isHydrated, setIsHydrated] = useState(false);
-  const [hasError, setHasError] = useState(false);
+// Hook simples para verificar se está no cliente
+export function useIsClient() {
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // Detectar se é iPhone
-    const isIPhone = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    
-    // Configurar timeout mais longo para iPhone
-    const timeout = isIPhone ? 5000 : 3000;
-    
-    const hydrationTimer = setTimeout(() => {
-      setIsHydrated(true);
-      
-      // Marcar como hidratado globalmente
-      if (typeof window !== 'undefined') {
-        window.isHydrated = true;
-        if (window.hydrationTimeout) {
-          clearTimeout(window.hydrationTimeout);
-        }
-      }
-    }, 100);
+    setIsClient(true);
+  }, []);
 
-    // Timeout de segurança
-    const safetyTimer = setTimeout(() => {
-      if (!isHydrated) {
-        console.warn('Hydration safety timeout reached');
-        setIsHydrated(true);
-      }
-    }, timeout);
+  return isClient;
+}
 
-    // Detectar erros durante a hidratação
-    const errorHandler = (error: ErrorEvent) => {
-      console.error('Hydration error:', error);
-      if (isIPhone) {
-        setHasError(true);
-      }
-    };
+// Componente principal simplificado
+export default function ClientHydration({ children, fallback }: ClientHydrationProps) {
+  const [isHydrated, setIsHydrated] = useState(false);
 
-    window.addEventListener('error', errorHandler);
+  useEffect(() => {
+    // Hidratação simples e direta
+    setIsHydrated(true);
+  }, []);
 
-    return () => {
-      clearTimeout(hydrationTimer);
-      clearTimeout(safetyTimer);
-      window.removeEventListener('error', errorHandler);
-    };
-  }, [isHydrated]);
-
-  // Mostrar fallback durante hidratação ou em caso de erro
-  if (!isHydrated || hasError) {
+  if (!isHydrated) {
     return (
-      <div 
-        style={{
-          minHeight: '100vh',
-          backgroundColor: '#000000',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white'
-        }}
-      >
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
         {fallback || (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ 
-              width: '40px', 
-              height: '40px', 
-              border: '3px solid #333', 
-              borderTop: '3px solid #ef4444',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto 16px'
-            }} />
+          <div className="text-center">
+            <div className="w-10 h-10 border-3 border-gray-600 border-t-red-500 rounded-full animate-spin mx-auto mb-4" />
             <p>Carregando...</p>
-            <style jsx>{`
-              @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-              }
-            `}</style>
           </div>
         )}
       </div>
@@ -105,23 +43,12 @@ export default function ClientHydration({ children, fallback }: ClientHydrationP
   return <>{children}</>;
 }
 
-// Hook para verificar se está hidratado
-export function useIsHydrated() {
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-
-  return isHydrated;
-}
-
 // Componente para renderização condicional no cliente
 export function ClientOnly({ children, fallback }: ClientHydrationProps) {
-  const isHydrated = useIsHydrated();
+  const isClient = useIsClient();
 
-  if (!isHydrated) {
-    return <>{fallback}</> || null;
+  if (!isClient) {
+    return <>{fallback || null}</>;
   }
 
   return <>{children}</>;

@@ -10,6 +10,10 @@ const faqs = [
     answer: "Após a compra, você recebe acesso imediato à plataforma através do seu e-mail. Você pode jogar direto pelo navegador do celular, sem precisar baixar nada. Para incluir seu parceiro(a), basta compartilhar o QR code que aparece no seu perfil."
   },
   {
+    question: "Como personalizar a experiência?",
+    answer: "Nossa plataforma se adapta às suas preferências. Você pode escolher diferentes níveis de intensidade, modos de jogo e personalizar completamente sua experiência baseada no perfil do casal."
+  },
+  {
     question: "É preciso baixar algum aplicativo?",
     answer: "Não! Nossa plataforma funciona 100% pelo navegador do celular, tablet ou computador. Isso garante mais privacidade e praticidade para vocês jogarem quando e onde quiserem."
   },
@@ -23,7 +27,7 @@ const faqs = [
   },
   {
     question: "Que tipos de jogos estão disponíveis?",
-    answer: "Temos uma variedade de jogos que incluem desafios de intimidade, roleplay com narração, jogos de perguntas picantes, desafios com timer, modo selvagem e muito mais. O conteúdo é adaptado às preferências do casal e evolui conforme vocês jogam."
+    answer: "Temos uma variedade de jogos que incluem desafios de intimidade, roleplay com narração, perguntas picantes, desafios com timer, modo exploração e muito mais. O conteúdo é adaptado às preferências do casal e evolui conforme vocês jogam."
   },
   {
     question: "Posso presentear meu parceiro(a)?",
@@ -70,6 +74,7 @@ export default function FaqSection() {
           <a 
             href="https://www.instagram.com/direct/t/17843072010081129"
             className="text-left text-sm md:text-base text-neutral-500 mt-6 underline hover:text-neutral-400 transition-colors inline-block"
+            suppressHydrationWarning
           >
             Dúvidas? Entre em contato por aqui
           </a>

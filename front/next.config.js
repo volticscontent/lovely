@@ -16,15 +16,39 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**',
       },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lovelygame.shop',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.lovelygame.shop',
+      },
+      {
+        protocol: 'https',
+        hostname: 'app.lovelygame.shop',
+      },
+      {
+        protocol: 'https',
+        hostname: 'pub-9e19518e85994c27a69dd5b29e669dca.r2.dev',
+      }
     ],
-    domains: ['localhost', '127.0.0.1', 'lovelygame.shop', 'api.lovelygame.shop', 'app.lovelygame.shop', 'pub-9e19518e85994c27a69dd5b29e669dca.r2.dev'],
     unoptimized: false,
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    minimumCacheTTL: 60,
+    minimumCacheTTL: 300,
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    loader: 'default',
   },
 
   // Headers otimizados para resolver problemas de CSP
@@ -96,9 +120,28 @@ const nextConfig = {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   },
 
-  // Configurações experimentais para melhor performance
+  // Configurações experimentais para Next.js 15
   experimental: {
-    optimizePackageImports: ['lucide-react'],
+    optimizePackageImports: ['lucide-react', 'framer-motion', '@radix-ui/react-accordion'],
+    esmExternals: true,
+    optimizeCss: true,
+  },
+
+  // Configurações básicas de webpack (compatível com Turbopack)
+  webpack: (config, { dev, isServer }) => {
+    // Alias para imports
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': require('path').resolve(__dirname, 'src'),
+    };
+
+    return config;
+  },
+
+  // Configuração de output com lazy loading
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
   },
 };
 

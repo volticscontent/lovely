@@ -17,7 +17,7 @@ const maskData = (data: string | undefined, type: 'email') => {
 };
 
 export default function AccountPage() {
-  const { user, isLoading, signOut } = useAuth();
+  const { user, isLoading, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function AccountPage() {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Minha Conta</h1>
           <button
-            onClick={signOut}
+            onClick={logout}
             className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-md transition-colors"
           >
             Sair

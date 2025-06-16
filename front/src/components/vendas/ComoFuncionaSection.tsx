@@ -1,10 +1,28 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, FC } from 'react';
 import Link from 'next/link';
 import { trackComoFuncionaCTA, trackDesafiosCTA } from '@/services/tracking';
 
-const GameModeCard = ({ mode, index }: { mode: any; index: number }) => (
+interface Step {
+  title: string;
+  description: string;
+  icon: string;
+}
+
+interface GameMode {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}
+
+interface ComoFuncionaSectionProps {
+  steps: Step[];
+  firstRowGames: GameMode[];
+  secondRowGames: GameMode[];
+}
+
+const GameModeCard = ({ mode }: { mode: GameMode }) => (
   <div
     key={mode.title}
     className="group relative bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-sm border border-gray-800/50 rounded-2xl p-6 hover:border-red-500/30 transition-all duration-300 cursor-pointer min-w-[300px] md:min-w-[350px] flex-shrink-0"
@@ -150,16 +168,12 @@ const gameModes = [
   }
 ];
 
-export default function ComoFuncionaSection() {
+const ComoFuncionaSection: FC<ComoFuncionaSectionProps> = ({ firstRowGames, secondRowGames }) => {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  // Dividir os jogos em duas linhas
-  const firstRowGames = gameModes.slice(0, Math.ceil(gameModes.length / 2));
-  const secondRowGames = gameModes.slice(Math.ceil(gameModes.length / 2));
 
   return (
     <section className="relative py-24 bg-black overflow-hidden">
@@ -172,7 +186,7 @@ export default function ComoFuncionaSection() {
         {/* Seção de Desafios */}
         <div className="mb-24">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {challenges.map((challenge, index) => (
+            {challenges.map((challenge) => (
               <div
                 key={challenge.question}
                 className="group"
@@ -220,8 +234,8 @@ export default function ComoFuncionaSection() {
             {/* Primeira linha de cards */}
             <div className="scroller relative z-20 max-w-7xl overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_20%,white_80%,transparent)]">
               <div className="flex gap-6 py-4 w-max carousel-scroll-reverse">
-                {firstRowGames.concat(firstRowGames).map((mode, index) => (
-                  <GameModeCard key={`first-${mode.title}-${index}`} mode={mode} index={index} />
+                {firstRowGames.map((game) => (
+                  <GameModeCard key={game.title} mode={game} />
                 ))}
               </div>
             </div>
@@ -229,8 +243,8 @@ export default function ComoFuncionaSection() {
             {/* Segunda linha de cards */}
             <div className="scroller relative z-20 max-w-7xl overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_20%,white_80%,transparent)]">
               <div className="flex gap-6 py-4 w-max carousel-scroll-forward">
-                {secondRowGames.concat(secondRowGames).map((mode, index) => (
-                  <GameModeCard key={`second-${mode.title}-${index}`} mode={mode} index={index} />
+                {secondRowGames.map((game) => (
+                  <GameModeCard key={game.title} mode={game} />
                 ))}
               </div>
             </div>
@@ -241,8 +255,8 @@ export default function ComoFuncionaSection() {
         {!isClient && (
           <div className="h-[28rem] rounded-md flex flex-col antialiased items-center justify-center relative overflow-hidden mt-12">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl">
-              {gameModes.slice(0, 6).map((mode, index) => (
-                <GameModeCard key={`fallback-${mode.title}`} mode={mode} index={index} />
+              {gameModes.slice(0, 6).map((mode) => (
+                <GameModeCard key={`fallback-${mode.title}`} mode={mode} />
               ))}
             </div>
           </div>
@@ -277,4 +291,6 @@ export default function ComoFuncionaSection() {
       `}</style>
     </section>
   );
-}
+};
+
+export default ComoFuncionaSection;

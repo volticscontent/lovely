@@ -1,9 +1,10 @@
-// Configuração do backend URL
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
+import { logger } from '@/utils/logger';
 
-// Log para debug
-console.log('🔧 API_BASE_URL configurado:', API_BASE_URL);
-console.log('🌍 NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
+// Configuração do backend URL
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
+
+logger.info(`API Base URL: ${API_BASE_URL}`);
+logger.info(`Environment: ${process.env.NODE_ENV}`);
 
 // Rotas da API
 export const API_ROUTES = {

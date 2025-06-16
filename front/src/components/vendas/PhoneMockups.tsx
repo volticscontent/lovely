@@ -1,158 +1,199 @@
 "use client";
 
-import { useRef, useEffect, useState } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 
-// Hook para detectar se é dispositivo móvel
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
-  
+// URLs dos GIFs - movidas para fora do componente para evitar recriação
+const GIF_URLS = [
+  "https://pub-9e19518e85994c27a69dd5b29e669dca.r2.dev/V%C3%8DDEO-SITE-01.gif",
+  "https://pub-9e19518e85994c27a69dd5b29e669dca.r2.dev/V%C3%8DDEO-SITE-02_1.gif",
+  "https://pub-9e19518e85994c27a69dd5b29e669dca.r2.dev/V%C3%8DDEOS-SITE-03_1.gif"
+] as const;
+
+const GIF_DESCRIPTIONS = [
+  "Demonstração do app - Tela de Início",
+  "Demonstração do app - Tela de Jogos", 
+  "Demonstração do app - Tela de Resultados"
+] as const;
+
+const PhoneMockupsClient = memo(() => {
+  const [currentGifIndex, setCurrentGifIndex] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Marca como montado no cliente
   useEffect(() => {
-    const checkMobile = () => {
-      const userAgent = navigator.userAgent.toLowerCase();
-      const isMobileDevice = /iphone|ipad|ipod|android|blackberry|mini|windows\sce|palm/i.test(userAgent);
-      setIsMobile(isMobileDevice);
-    };
-    
-    checkMobile();
+    setIsMounted(true);
+    const timer = setTimeout(() => setIsLoaded(true), 100);
+    return () => clearTimeout(timer);
   }, []);
-  
-  return isMobile;
-}
 
-export default function PhoneMockups() {
-  const image1Ref = useRef<HTMLImageElement | null>(null);
-  const image2Ref = useRef<HTMLImageElement | null>(null);
-  const image3Ref = useRef<HTMLImageElement | null>(null);
-  
-  const isMobile = useIsMobile();
-  
-  const [gifError, setGifError] = useState({ gif1: false, gif2: false, gif3: false });
+  // Alterna entre os GIFs a cada 4 segundos
+  useEffect(() => {
+    if (!isMounted) return;
+    
+    const interval = setInterval(() => {
+      setCurrentGifIndex((prevIndex) => (prevIndex + 1) % GIF_URLS.length);
+    }, 4000);
 
-  // URLs dos GIFs
-  const gifUrls = {
-    gif1: "https://pub-9e19518e85994c27a69dd5b29e669dca.r2.dev/V%C3%8DDEO-SITE-01.gif",
-    gif2: "https://pub-9e19518e85994c27a69dd5b29e669dca.r2.dev/V%C3%8DDEO-SITE-02_1.gif",
-    gif3: "https://pub-9e19518e85994c27a69dd5b29e669dca.r2.dev/V%C3%8DDEOS-SITE-03_1.gif"
-  };
+    return () => clearInterval(interval);
+  }, [isMounted]);
 
-  const handleImageError = (gifKey: keyof typeof gifError) => {
-    setGifError(prev => ({ ...prev, [gifKey]: true }));
-  };
+  // Renderização consistente durante a hidratação
+  if (!isMounted) {
+    return (
+      <div className="relative lg:flex items-center w-full lg:w-1/2 justify-center h-[290px] md:h-[240px] lg:h-auto lg:mt-0 overflow-visible">
+        <div 
+          className="mockup-container absolute w-[85%] max-w-[240px] lg:max-w-[240px] lg:rotate-[3deg] aspect-[9/16] lg:mt-2 transition-all duration-700 ease-out translate-x-[110px] lg:translate-x-[-10px] top-[10px] md:top-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:left-1/2 opacity-0"
+          style={{
+            zIndex: 10,
+            boxShadow: 'rgba(0, 0, 0, 0.25) 0px 8px 25px, rgba(225, 29, 72, 0.1) 0px 0px 20px',
+            filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))'
+          }}
+        >
+          <Image 
+            alt="Moldura do celular" 
+            className="absolute z-50 w-full h-full pointer-events-none" 
+            src="/images/mockup.webp"
+            width={240}
+            height={427}
+            priority={true}
+            sizes="(max-width: 768px) 85px, 240px"
+            style={{ objectFit: 'contain' }}
+            quality={95}
+          />
+          
+          <div 
+            className="mockup-content absolute rounded-[18px] lg:rounded-[28px] overflow-hidden cursor-pointer z-40 bg-black"
+            style={{
+              top: '3.5%',
+              left: '6.5%',
+              width: '87%',
+              height: '93.5%',
+              boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.1)'
+            }}
+          >
+            <Image 
+              alt={GIF_DESCRIPTIONS[0]}
+              className="w-full h-full object-cover"
+              src={GIF_URLS[0]}
+              width={200}
+              height={400}
+              sizes="(max-width: 768px) 75px, 200px"
+              unoptimized
+              loading="eager"
+              style={{ 
+                objectFit: 'cover',
+                objectPosition: 'center center'
+              }}
+              quality={85}
+            />
+            
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'linear-gradient(135deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.02) 50%, transparent 100%)',
+                mixBlendMode: 'overlay'
+              }}
+            />
+          </div>
+          
+          <div 
+            className="absolute inset-0 rounded-[20px] lg:rounded-[32px] pointer-events-none z-30 opacity-60"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 30%, transparent 70%, rgba(255,255,255,0.05) 100%)',
+              mixBlendMode: 'overlay'
+            }}
+          />
+          
+          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1 z-20 lg:opacity-80">
+            {GIF_URLS.map((_, index) => (
+              <div
+                key={index}
+                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                  index === 0 ? 'bg-white' : 'bg-white/40'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div 
-      className="relative lg:flex items-center w-full lg:w-1/2 justify-center h-[180px] md:h-[220px] lg:h-auto lg:mt-0 overflow-visible"
-    >
-      {/* Smartphone 1 - Esquerdo */}
+    <div className="relative lg:flex items-center w-full lg:w-2/2 justify-center h-[220px] md:h-[250px] lg:h-auto lg:mt-0 overflow-visible">
       <div 
-        className="absolute w-[80%] max-w-[100px] lg:max-w-[220px] lg:rotate-[-8deg] lg:translate-x-[-180px] top-[15px] md:top-[25px] lg:top-1/2 lg:-translate-y-1/2 left-[10px] md:left-[20px] lg:left-1/2 aspect-[9/16] transition-all duration-300 hover:z-50 hover:scale-110"
+        className={`mockup-container absolute w-[85%] max-w-[240px] lg:max-w-[240px] lg:rotate-[3deg] aspect-[9/16] lg:mt-2 transition-all duration-700 ease-out translate-x-[110px] lg:translate-x-[-10px] top-[10px] md:top-[20px] lg:top-1/2 lg:-translate-y-1/2 lg:left-1/2 hover:z-50 hover:scale-105 hover:rotate-0 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
         style={{
-          zIndex: 3,
-          boxShadow: 'rgba(0, 0, 0, 0.1) 0px 4px 6px, rgba(0, 0, 0, 0.08) 0px 1px 3px'
+          zIndex: 10,
+          boxShadow: 'rgba(0, 0, 0, 0.25) 0px 8px 25px, rgba(225, 29, 72, 0.1) 0px 0px 20px',
+          filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))'
         }}
       >
         <Image 
-          alt="mockup" 
-          className="absolute z-50 w-full h-full" 
+          alt="Moldura do celular" 
+          className="absolute z-50 w-full h-full pointer-events-none" 
           src="/images/mockup.webp"
-          fill
-          priority
-          sizes="(max-width: 768px) 100px, 220px"
+          width={240}
+          height={427}
+          priority={true}
+          sizes="(max-width: 768px) 85px, 240px"
+          style={{ objectFit: 'contain' }}
+          quality={95}
         />
-        <div className="relative w-[97%] h-[99%] rounded-2xl overflow-hidden cursor-not-allowed z-40">
-          {gifError.gif1 ? (
-            <div className="absolute top-0.5 left-0.5 lg:left-1 lg:top-2 rounded-md lg:rounded-3xl w-full h-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
-              <span className="text-white text-xs font-medium">Demonstração 1</span>
-            </div>
-          ) : (
-            <Image 
-              ref={image1Ref}
-              alt="Demonstração do app - Tela 1"
-              className="absolute top-0.5 left-0.5 lg:left-1 lg:top-2 rounded-md lg:rounded-3xl w-full h-full object-cover"
-              src={gifUrls.gif1}
-              fill
-              priority={!isMobile}
-              sizes="(max-width: 768px) 100px, 220px"
-              onError={() => handleImageError('gif1')}
-              unoptimized
-            />
-          )}
+        
+        <div 
+          className="mockup-content absolute rounded-[18px] lg:rounded-[28px] overflow-hidden cursor-pointer z-40 bg-black"
+          style={{
+            top: '2.2%',
+            left: '6.5%',
+            width: '87%',
+            height: '93.5%',
+            boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.1)'
+          }}
+        >
+          <Image 
+            alt={GIF_DESCRIPTIONS[currentGifIndex]}
+            className="w-full h-full object-cover transition-opacity duration-700 ease-in-out"
+            src={GIF_URLS[currentGifIndex]}
+            width={200}
+            height={400}
+            sizes="(max-width: 768px) 75px, 200px"
+            unoptimized
+            loading="eager"
+            style={{ 
+              objectFit: 'cover',
+              objectPosition: 'center center'
+            }}
+            quality={85}
+            key={currentGifIndex}
+            onLoad={() => setIsLoaded(true)}
+          />
+          
         </div>
-      </div>
-
-      {/* Smartphone 2 - Central */}
-      <div 
-        className="absolute w-[80%] max-w-[100px] lg:max-w-[220px] lg:rotate-[5deg] aspect-[9/16] lg:mt-3 transition-all translate-x-[120px] lg:translate-x-[-20px] top-[15px] md:top-[25px] lg:top-1/2 lg:-translate-y-1/2 lg:left-1/2 duration-300 hover:z-50 hover:scale-110"
-        style={{
-          zIndex: 2,
-          boxShadow: 'rgba(0, 0, 0, 0.1) 0px 4px 6px, rgba(0, 0, 0, 0.08) 0px 1px 3px'
-        }}
-      >
-        <Image 
-          alt="mockup" 
-          className="absolute z-50 w-full h-full" 
-          src="/images/mockup.webp"
-          fill
-          priority
-          sizes="(max-width: 768px) 100px, 220px"
-        />
-        <div className="relative w-[97%] h-[99%] rounded-2xl overflow-hidden cursor-not-allowed z-40">
-          {gifError.gif2 ? (
-            <div className="absolute top-0.5 left-0.5 lg:left-1 lg:top-2 rounded-md lg:rounded-3xl w-full h-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-              <span className="text-white text-xs font-medium">Demonstração 2</span>
-            </div>
-          ) : (
-            <Image 
-              ref={image2Ref}
-              alt="Demonstração do app - Tela 2"
-              className="absolute top-0.5 left-0.5 lg:left-1 lg:top-2 rounded-md lg:rounded-3xl w-full h-full object-cover"
-              src={gifUrls.gif2}
-              fill
-              priority={!isMobile}
-              sizes="(max-width: 768px) 100px, 220px"
-              onError={() => handleImageError('gif2')}
-              unoptimized
+        
+        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1 z-20 lg:opacity-80">
+          {GIF_URLS.map((_, index) => (
+            <div
+              key={index}
+              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                index === currentGifIndex ? 'bg-white' : 'bg-white/40'
+              }`}
             />
-          )}
-        </div>
-      </div>
-
-      {/* Smartphone 3 - Direito */}
-      <div 
-        className="absolute w-[80%] max-w-[100px] lg:max-w-[220px] lg:rotate-[18deg] aspect-[9/16] lg:mt-12 translate-x-[240px] lg:translate-x-[140px] top-[15px] md:top-[25px] lg:top-1/2 lg:-translate-y-1/2 lg:left-1/2 transition-all duration-300 hover:z-50 hover:scale-110"
-        style={{
-          zIndex: 1,
-          boxShadow: 'rgba(0, 0, 0, 0.1) 0px 4px 6px, rgba(0, 0, 0, 0.08) 0px 1px 3px'
-        }}
-      >
-        <Image 
-          alt="mockup" 
-          className="absolute z-50 w-full h-full" 
-          src="/images/mockup.webp"
-          fill
-          priority
-          sizes="(max-width: 768px) 100px, 220px"
-        />
-        <div className="relative w-[97%] h-[99%] rounded-2xl overflow-hidden cursor-not-allowed z-40">
-          {gifError.gif3 ? (
-            <div className="absolute top-0.5 left-0.5 lg:left-1 lg:top-2 rounded-md lg:rounded-3xl w-full h-full bg-gradient-to-br from-green-600 to-blue-600 flex items-center justify-center">
-              <span className="text-white text-xs font-medium">Demonstração 3</span>
-            </div>
-          ) : (
-            <Image 
-              ref={image3Ref}
-              alt="Demonstração do app - Tela 3"
-              className="absolute top-0.5 left-0.5 lg:left-1 lg:top-2 rounded-md lg:rounded-3xl w-full h-full object-cover"
-              src={gifUrls.gif3}
-              fill
-              sizes="(max-width: 768px) 100px, 220px"
-              onError={() => handleImageError('gif3')}
-              unoptimized
-            />
-          )}
+          ))}
         </div>
       </div>
     </div>
   );
-}
+});
+
+PhoneMockupsClient.displayName = 'PhoneMockupsClient';
+
+// Exporta com dynamic import para evitar problemas de hidratação
+const PhoneMockups = dynamic(() => Promise.resolve(PhoneMockupsClient), {
+  ssr: true
+});
+
+export default PhoneMockups;

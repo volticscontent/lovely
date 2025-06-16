@@ -62,7 +62,7 @@ export function middleware(request: NextRequest) {
   if (pathname === '/') {
     response.headers.set(
       'Link',
-      '</images/logo.png>; rel=preload; as=image, </_next/static/css/app/globals.css>; rel=preload; as=style'
+      '</_next/static/css/app/globals.css>; rel=preload; as=style'
     );
   }
 

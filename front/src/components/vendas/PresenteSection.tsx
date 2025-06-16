@@ -34,13 +34,12 @@ export default function PresenteSection() {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto mb-12">
-            {features.map((feature, index) => (
-              <div
-                key={feature.text}
-                className="flex items-center space-x-3 bg-gradient-to-r from-red-500/5 to-transparent p-4 rounded-xl border border-red-500/10"
-              >
-                <span className="text-2xl">{feature.icon}</span>
-                <span className="text-neutral-200">{feature.text}</span>
+            {features.map((feature) => (
+              <div key={feature.text} className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-red-500 to-pink-600 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">{feature.icon}</span>
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">{feature.text}</h3>
               </div>
             ))}
           </div>

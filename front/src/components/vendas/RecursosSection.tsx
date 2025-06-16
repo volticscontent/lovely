@@ -1,21 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Users, QrCode, Sparkles, Crown, Zap, Flame } from 'lucide-react';
 
 export default function RecursosSection() {
-  // Estado para cálculo dos segundos
-  const [seconds, setSeconds] = useState(39);
-
-  // Efeito para atualizar os segundos
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSeconds(prevSeconds => (prevSeconds + 1) % 60);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
   return (
     <section className="relative z-20 py-32 max-w-7xl mx-auto" data-sentry-component="Features">
       <div className="px-8">

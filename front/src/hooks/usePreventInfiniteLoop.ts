@@ -1,68 +1,56 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
+
+interface CallbackFunction {
+  (...args: unknown[]): void | Promise<void>;
+}
 
 // Hook para prevenir loops infinitos em useEffect
 export function usePreventInfiniteLoop(
-  fn: () => void | (() => void),
-  deps: React.DependencyList,
-  maxExecutions: number = 3
+  callback: CallbackFunction,
+  delay: number,
+  dependencies: unknown[] = []
 ) {
-  const executionCount = useRef(0);
-  const lastDepsRef = useRef<React.DependencyList>([]);
-  const isExecuting = useRef(false);
+  const callbackRef = useRef(callback);
+  const timeoutRef = useRef<NodeJS.Timeout>();
 
-  const resetCounter = useCallback(() => {
-    executionCount.current = 0;
-  }, []);
+  // Criar um hash estável das dependências para evitar o spread warning
+  const dependenciesHash = useMemo(() => {
+    return JSON.stringify(dependencies);
+  }, dependencies); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    // Verificar se as dependências realmente mudaram
-    const depsChanged = deps.some((dep, index) => dep !== lastDepsRef.current[index]);
-    
-    if (!depsChanged && executionCount.current > 0) {
-      return;
+    callbackRef.current = callback;
+  }, [callback]);
+
+  useEffect(() => {
+    const executeCallback = () => {
+      callbackRef.current();
+    };
+
+    timeoutRef.current = setTimeout(executeCallback, delay);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [delay, dependenciesHash]);
+
+  const clear = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
     }
+  }, []);
 
-    // Prevenir execução se já está executando
-    if (isExecuting.current) {
-      console.warn('Tentativa de execução durante execução em andamento - prevenindo loop');
-      return;
-    }
-
-    // Verificar limite de execuções
-    if (executionCount.current >= maxExecutions) {
-      console.error(`Loop infinito detectado! Máximo de ${maxExecutions} execuções atingido.`);
-      return;
-    }
-
-    // Executar função
-    isExecuting.current = true;
-    executionCount.current++;
-    lastDepsRef.current = [...deps];
-
-    try {
-      const cleanup = fn();
-      isExecuting.current = false;
-      
-      return () => {
-        if (cleanup && typeof cleanup === 'function') {
-          cleanup();
-        }
-      };
-    } catch (error) {
-      isExecuting.current = false;
-      console.error('Erro durante execução:', error);
-    }
-  }, deps);
-
-  return { resetCounter, executionCount: executionCount.current };
+  return { clear };
 }
 
 // Hook para debounce de funções
-export function useDebounce<T extends (...args: any[]) => any>(
+export function useDebounce<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number
 ): T {
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   const debouncedCallback = useCallback(
     (...args: Parameters<T>) => {
@@ -90,7 +78,7 @@ export function useDebounce<T extends (...args: any[]) => any>(
 }
 
 // Hook para throttle de funções
-export function useThrottle<T extends (...args: any[]) => any>(
+export function useThrottle<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number
 ): T {
@@ -114,7 +102,7 @@ export function useThrottle<T extends (...args: any[]) => any>(
 }
 
 // Hook para memoização estável de objetos
-export function useStableCallback<T extends (...args: any[]) => any>(callback: T): T {
+export function useStableCallback<T extends (...args: unknown[]) => unknown>(callback: T): T {
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
 
@@ -124,55 +112,23 @@ export function useStableCallback<T extends (...args: any[]) => any>(callback: T
 }
 
 // Hook para controle de estado de loading
-export function useLoadingState(initialState: boolean = false) {
-  const [loading, setLoading] = useState(initialState);
-  const [error, setError] = useState<string | null>(null);
-  const isExecuting = useRef(false);
+export function useLoadingState() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  const executeAsync = useCallback(async <T>(
-    asyncFn: () => Promise<T>,
-    errorHandler?: (error: Error) => void
-  ): Promise<T | null> => {
-    if (isExecuting.current) {
-      console.warn('Operação assíncrona já em andamento');
-      return null;
-    }
+  const executeAsync = useCallback(async (callback: CallbackFunction) => {
+    setIsLoading(true);
+    setError(null);
 
     try {
-      isExecuting.current = true;
-      setLoading(true);
-      setError(null);
-      
-      const result = await asyncFn();
-      return result;
+      await callback();
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Erro desconhecido');
-      setError(error.message);
-      
-      if (errorHandler) {
-        errorHandler(error);
-      } else {
-        console.error('Erro durante operação assíncrona:', error);
-      }
-      
-      return null;
+      setError(err instanceof Error ? err : new Error('Erro desconhecido'));
+      throw err;
     } finally {
-      isExecuting.current = false;
-      setLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
-  const reset = useCallback(() => {
-    setError(null);
-    setLoading(false);
-    isExecuting.current = false;
-  }, []);
-
-  return {
-    loading,
-    error,
-    executeAsync,
-    reset,
-    isExecuting: isExecuting.current
-  };
+  return { isLoading, error, executeAsync };
 } 

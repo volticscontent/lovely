@@ -1,60 +1,24 @@
 "use client";
 
-import React, { useRef, useEffect } from 'react';
-import Link from 'next/link';
+import React from 'react';
+import Image from 'next/image';
 
-export default function AuthHeader() {
-  const video0Ref = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    // Função para garantir que o vídeo seja reproduzido
-    const playVideo = () => {
-      if (video0Ref.current) {
-        // Definir currentTime para 0 para garantir que o vídeo comece do início
-        video0Ref.current.currentTime = 0;
-        // Tentar reproduzir o vídeo com tratamento de erro
-        video0Ref.current.play()
-          .catch(err => {
-            // Fallback silencioso - tenta novamente após 1 segundo
-            setTimeout(playVideo, 1000);
-          });
-      }
-    };
-
-    // Iniciar a reprodução do vídeo
-    playVideo();
-
-    // Adicionar evento para detectar quando o vídeo está pausado ou congelado
-    const handlePause = () => {
-      if (video0Ref.current) {
-        playVideo();
-      }
-    };
-
-    if (video0Ref.current) {
-      video0Ref.current.addEventListener('pause', handlePause);
-    }
-    
-    return () => {
-      // Limpar eventos quando o componente for desmontado
-      if (video0Ref.current) {
-        video0Ref.current.removeEventListener('pause', handlePause);
-      }
-    };
-  }, []);
-
+const AuthHeader = () => {
   return (
-    <div className="flex items-center justify-center gap-2 mb-6">
-      <div className="relative h-16 w-16 overflow-visible">
-        <img 
-          src="/images/logo.png" 
-          className="w-full h-full object-contain scale-125"
+    <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-red-900/20 to-black/80 min-h-[300px]">
+      <div className="absolute inset-0 bg-black/30" />
+      <div className="relative z-10 flex items-center justify-center">
+        <Image
+          src="/images/logo.png"
+          alt="Lovely Logo"
+          width={200}
+          height={200}
+          className="w-auto h-auto max-w-[150px] md:max-w-[200px]"
+          priority
         />
-      </div>
-      <div className="text-white font-bold text-2xl md:text-3xl tracking-wide">
-        <span className="text-white">Love</span>
-        <span className="text-red-500">ly</span>
       </div>
     </div>
   );
-} 
+};
+
+export default AuthHeader; 

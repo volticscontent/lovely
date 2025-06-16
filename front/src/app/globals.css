@@ -835,78 +835,91 @@ section {
   width: 100%;
 }
 
-/* Animação para mockup */
-.mockup-fade-in {
-  animation: mockupFadeIn 1.5s ease-in-out forwards;
-  opacity: 0;
-}
-
-@keyframes mockupFadeIn {
+/* Animações para mockups */
+@keyframes mockup-fade-in {
   0% {
     opacity: 0;
-    transform: scale(1.1) translateY(20px);
-    filter: blur(5px);
-  }
-  60% {
-    filter: blur(0);
+    transform: translateY(20px) scale(0.95);
   }
   100% {
-    opacity: var(--mockup-opacity, 0.3);
-    transform: scale(1) translateY(0);
-    filter: blur(0);
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
-.mockup-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  mix-blend-mode: overlay;
-  pointer-events: none;
-  z-index: 50;
-}
-
-.mockup-floating {
-  animation: floatMockup 8s ease-in-out infinite;
-  will-change: transform;
-}
-
-@keyframes floatMockup {
+@keyframes deviceFloat {
   0%, 100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  25% {
-    transform: translateY(-10px) rotate(0.5deg);
+    transform: translateY(0px) rotate(3deg);
   }
   50% {
-    transform: translateY(-15px) rotate(0deg);
-  }
-  75% {
-    transform: translateY(-5px) rotate(-0.5deg);
+    transform: translateY(-8px) rotate(3deg);
   }
 }
 
-/* Animação de pulso para elementos decorativos */
-@keyframes pulseGlow {
+@keyframes deviceFloatHover {
   0%, 100% {
-    opacity: 0.3;
-    transform: scale(1);
+    transform: translateY(-2px) rotate(0deg) scale(1.05);
   }
   50% {
-    opacity: 0.6;
-    transform: scale(1.1);
+    transform: translateY(-10px) rotate(0deg) scale(1.05);
   }
 }
 
-.pulse-glow {
-  animation: pulseGlow 4s ease-in-out infinite;
+@keyframes mockupGlow {
+  0%, 100% {
+    box-shadow: 
+      rgba(0, 0, 0, 0.25) 0px 8px 25px, 
+      rgba(225, 29, 72, 0.1) 0px 0px 20px;
+  }
+  50% {
+    box-shadow: 
+      rgba(0, 0, 0, 0.3) 0px 12px 35px, 
+      rgba(225, 29, 72, 0.2) 0px 0px 30px;
+  }
 }
 
-.pulse-glow-delayed {
-  animation: pulseGlow 4s ease-in-out infinite;
-  animation-delay: 2s;
+/* Aplicar animações aos mockups */
+.mockup-container {
+  animation: mockup-fade-in 0.8s ease-out, deviceFloat 6s ease-in-out infinite;
+}
+
+.mockup-container:hover {
+  animation: deviceFloatHover 2s ease-in-out infinite, mockupGlow 2s ease-in-out infinite;
+}
+
+/* Melhorar a transição do conteúdo do mockup */
+.mockup-content {
+  transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mockup-content:hover {
+  transform: scale(1.02);
+}
+
+/* Efeito de loading para GIFs */
+.gif-loading {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Indicadores de GIF */
+.gif-indicator {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gif-indicator.active {
+  background: linear-gradient(45deg, #e11d48, #f43f5e);
+  box-shadow: 0 0 8px rgba(225, 29, 72, 0.4);
 }
 
 /* Estilos para os mockups de dispositivos */

@@ -1,85 +1,20 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
+import React, { useEffect } from 'react';
 import Image from 'next/image';
 import PhoneMockups from './PhoneMockups';
-import HeartRain from './hero/HeartRain';
-import { trackHeroCTA, trackSectionView } from '@/components/common/PixelManager';
-
-// Custom Hook para efeito de digitação otimizado
-function useTypewriter(words: string[], typingSpeed = 150, deletingSpeed = 75, delayBetween = 2500) {
-  const [currentText, setCurrentText] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
-  
-  useEffect(() => {
-    const target = words[currentIndex];
-    let timer: NodeJS.Timeout;
-    
-    if (isDeleting) {
-      if (currentText.length === 0) {
-        setIsDeleting(false);
-        setCurrentIndex((prev) => (prev + 1) % words.length);
-      } else {
-        timer = setTimeout(() => {
-          setCurrentText((prev) => prev.slice(0, -1));
-        }, deletingSpeed);
-      }
-    } else {
-      if (currentText === target) {
-        timer = setTimeout(() => {
-          setIsDeleting(true);
-        }, delayBetween);
-      } else {
-        timer = setTimeout(() => {
-          setCurrentText((prev) => prev + target.charAt(prev.length));
-        }, typingSpeed);
-      }
-    }
-    
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [currentText, currentIndex, isDeleting, words, typingSpeed, deletingSpeed, delayBetween]);
-  
-  return currentText;
-}
+import { trackHeroCTA } from '@/components/common/PixelManager';
 
 export default function HeroSection() {
-  const words = ["alguém especial", "seu amigo", "quem você ama"];
-  const displayText = useTypewriter(words, 150, 75, 2500);
-  const [isMobile, setIsMobile] = useState(false);
-  
-  // Verificar se é mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Rastrear visualização da seção Hero
-  useEffect(() => {
-    trackSectionView('Hero');
-  }, []);
-
-  // Função para rolagem suave até a seção "plans"
-  const scrollToPlans = () => {
-    // Rastrear clique no CTA principal
+  const handleCTAClick = async () => {
     trackHeroCTA();
     
-    const plansSection = document.getElementById('planos');
-    if (plansSection) {
-      plansSection.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'start' 
-      });
-    }
+    setTimeout(() => {
+      const plansSection = document.getElementById('plans');
+      if (plansSection) {
+        plansSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 500);
   };
 
   useEffect(() => {
@@ -190,12 +125,9 @@ export default function HeroSection() {
           ></div>
         </div>
 
-        {/* Efeito de chuva de corações */}
-        <HeartRain />
-
         {/* Conteúdo principal */}
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-36 relative z-50 min-h-[calc(50vh-15rem)]" data-sentry-component="Hero">
-          <div className="w-full pt-[10px] lg:w-1/2 lg:pt-0 lg:ml-25">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-4 lg:gap-28 relative z-50 min-h-[calc(50vh-15rem)]" data-sentry-component="Hero">
+          <div className="w-full pt-[10px] lg:w-1/2 lg:pt-0 lg:ml-20">
             <button className="relative flex border content-center bg-black/20 hover:bg-black/10 transition duration-500 dark:bg-white/20 items-center flex-col flex-nowrap gap-10 h-min justify-center overflow-visible p-px decoration-clone w-fit rounded-full">
               <div className="w-auto z-10 px-4 py-2 rounded-[inherit] bg-black text-white text-xs flex items-center space-x-2">
                 <span>Jogos para casais</span>
@@ -219,7 +151,7 @@ export default function HeroSection() {
             
             <button 
               type="button" 
-              onClick={scrollToPlans}
+              onClick={handleCTAClick}
               className="relative mt-6 w-full lg:w-[50%] inline-flex h-[3.2rem] overflow-hidden rounded-lg p-[2px] focus:outline-none focus:ring-0"
               style={{
                 WebkitTapHighlightColor: 'transparent',
@@ -261,7 +193,7 @@ export default function HeroSection() {
                         width={32}
                         height={32}
                         className="object-cover"
-                        priority={true}
+                        loading="lazy"
                       />
                     </div>
                   ))}

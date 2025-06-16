@@ -3,7 +3,6 @@
 import React from 'react';
 import { Check, X, ChevronRight, Trophy } from 'lucide-react';
 import StarsBackground from './plans/StarsBackground';
-import HoverBorderGradient from './plans/HoverBorderGradient';
 import Link from 'next/link';
 import { trackPlanCheckout, trackPlanView } from '@/components/common/PixelManager';
 import { type PlanId } from '@/config/pixels';
@@ -104,9 +103,9 @@ export default function PlansSection() {
   };
 
   return (
-    <div id="planos" className="relative w-full rounded-md overflow-hidden">
+    <section id="plans" className="relative w-full rounded-md overflow-hidden bg-black">
       <StarsBackground />
-      <div className="flex items-center flex-col justify-center gap-16 px-2 md:px-10 py-8 w-full h-full relative">
+      <div className="flex items-center flex-col justify-center gap-16 px-2 md:px-10 py-16 w-full h-full relative bg-black">
         <div className="mx-auto max-w-4xl">
           <h2 className="text-white text-3xl md:text-5xl font-bold text-center">
             Escolha Seu Plano
@@ -118,7 +117,7 @@ export default function PlansSection() {
 
         {/* Cards de Planos */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-[1000] max-w-7xl mx-auto">
-          {plans.map((plan, index) => (
+          {plans.map((plan) => (
             <div 
               key={plan.id} 
               className={`w-full bg-transparent ${plan.recommended ? 'lg:scale-105 lg:z-10' : ''}`}
@@ -189,9 +188,6 @@ export default function PlansSection() {
                     <ChevronRight size={18} className="ml-2" />
                   </Link>
                 </div>
-
-                <HoverBorderGradient />
-                <div className="bg-black absolute z-1 flex-none inset-[2px] rounded-[100px]" />
               </button>
             </div>
           ))}
@@ -204,6 +200,6 @@ export default function PlansSection() {
           </p>
         </div>
       </div>
-    </div>
+    </section>
   );
 } 

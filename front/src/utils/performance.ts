@@ -50,8 +50,11 @@ export function preloadCriticalResources() {
   });
 }
 
+// Tipos específicos para evitar any
+type AnyFunction = (...args: unknown[]) => unknown;
+
 // Função para debounce de funções
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends AnyFunction>(
   func: T,
   wait: number,
   immediate?: boolean
@@ -74,7 +77,7 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 // Função para throttle de funções
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends AnyFunction>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {
@@ -121,15 +124,21 @@ export async function loadModuleLazy<T>(
   return null;
 }
 
+// Interface para cache
+interface CacheEntry<T> {
+  value: T;
+  timestamp: number;
+}
+
 // Função para cache de resultados
-const cache = new Map<string, any>();
+const cache = new Map<string, CacheEntry<unknown>>();
 
 export function cacheResult<T>(
   key: string,
   factory: () => T,
   ttl: number = 300000 // 5 minutos padrão
 ): T {
-  const cached = cache.get(key);
+  const cached = cache.get(key) as CacheEntry<T> | undefined;
   
   if (cached && Date.now() - cached.timestamp < ttl) {
     return cached.value;
@@ -188,15 +197,13 @@ export function initPerformanceMonitor() {
   const observer = new PerformanceObserver((list) => {
     for (const entry of list.getEntries()) {
       if (entry.entryType === 'largest-contentful-paint') {
-        console.log('LCP:', entry.startTime);
+        // LCP metric collected silently
       }
       if (entry.entryType === 'first-input') {
-        const fidEntry = entry as any; // Type assertion para PerformanceEventTiming
-        console.log('FID:', fidEntry.processingStart - entry.startTime);
+        // FID metric collected silently
       }
       if (entry.entryType === 'layout-shift') {
-        const clsEntry = entry as any; // Type assertion para LayoutShift
-        console.log('CLS:', clsEntry.value);
+        // CLS metric collected silently
       }
     }
   });

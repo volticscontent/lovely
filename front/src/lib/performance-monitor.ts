@@ -1,3 +1,5 @@
+import { PerformanceLayoutShiftEntry, PerformanceThresholds } from '@/types';
+
 // Sistema de monitoramento de performance para Web Vitals
 interface PerformanceMetric {
   name: string;
@@ -5,6 +7,10 @@ interface PerformanceMetric {
   delta: number;
   id: string;
   entries?: PerformanceEntry[];
+}
+
+interface FIDEntry extends PerformanceEntry {
+  processingStart: number;
 }
 
 class PerformanceMonitor {
@@ -62,32 +68,30 @@ class PerformanceMonitor {
     const lcpEntry = entries[entries.length - 1];
     if (lcpEntry) {
       this.recordMetric('LCP', lcpEntry.startTime, 0, lcpEntry.name, [lcpEntry]);
-      console.log(`LCP: ${lcpEntry.startTime.toFixed(2)}ms`);
     }
   }
 
   // First Input Delay
   private onFID(entries: PerformanceEntry[]) {
-    const fidEntry = entries[0] as any;
-    if (fidEntry) {
+    const fidEntry = entries[0] as FIDEntry;
+    if (fidEntry && 'processingStart' in fidEntry) {
       const delay = fidEntry.processingStart - fidEntry.startTime;
       this.recordMetric('FID', delay, 0, fidEntry.name, [fidEntry]);
-      console.log(`FID: ${delay.toFixed(2)}ms`);
     }
   }
 
   // Cumulative Layout Shift
   private onCLS(entries: PerformanceEntry[]) {
     let clsValue = 0;
-    entries.forEach((entry: any) => {
-      if (!entry.hadRecentInput) {
-        clsValue += entry.value;
+    entries.forEach((entry) => {
+      const clsEntry = entry as PerformanceLayoutShiftEntry;
+      if (!clsEntry.hadRecentInput) {
+        clsValue += clsEntry.value;
       }
     });
     
     if (clsValue > 0) {
       this.recordMetric('CLS', clsValue, 0, 'layout-shift', entries);
-      console.log(`CLS: ${clsValue.toFixed(4)}`);
     }
   }
 
@@ -96,7 +100,6 @@ class PerformanceMonitor {
     const fcpEntry = entries[0];
     if (fcpEntry) {
       this.recordMetric('FCP', fcpEntry.startTime, 0, fcpEntry.name, [fcpEntry]);
-      console.log(`FCP: ${fcpEntry.startTime.toFixed(2)}ms`);
     }
   }
 
@@ -111,8 +114,6 @@ class PerformanceMonitor {
       this.recordMetric('TTFB', ttfb, 0, 'navigation', [navEntry]);
       this.recordMetric('DOM_LOAD', domLoad, 0, 'navigation', [navEntry]);
       this.recordMetric('WINDOW_LOAD', windowLoad, 0, 'navigation', [navEntry]);
-      
-      console.log(`TTFB: ${ttfb.toFixed(2)}ms, DOM Load: ${domLoad.toFixed(2)}ms, Window Load: ${windowLoad.toFixed(2)}ms`);
     }
   }
 
@@ -126,7 +127,6 @@ class PerformanceMonitor {
         if (document.querySelector('[data-reactroot]') || document.querySelector('#__next')) {
           const hydrationTime = performance.now() - startTime;
           this.recordMetric('HYDRATION', hydrationTime, 0, 'custom');
-          console.log(`Hydration: ${hydrationTime.toFixed(2)}ms`);
         } else {
           requestAnimationFrame(checkHydration);
         }
@@ -168,7 +168,6 @@ class PerformanceMonitor {
         
         if (url.includes('/api/')) {
           this.recordMetric('API_CALL', duration, 0, url);
-          console.log(`API ${url}: ${duration.toFixed(2)}ms`);
         }
         
         return response;
@@ -216,7 +215,7 @@ class PerformanceMonitor {
 
   // Avaliar status da métrica
   private getMetricStatus(name: string, value: number): string {
-    const thresholds: { [key: string]: { good: number; needs_improvement: number } } = {
+    const thresholds: PerformanceThresholds = {
       'LCP': { good: 2500, needs_improvement: 4000 },
       'FID': { good: 100, needs_improvement: 300 },
       'CLS': { good: 0.1, needs_improvement: 0.25 },

@@ -1,8 +1,10 @@
+import { FacebookPixel, UTMify } from '@/types';
+
 // Declaração de tipos para window
 declare global {
   interface Window {
-    fbq: any;
-    utmify: any;
+    fbq: FacebookPixel;
+    utmify: UTMify;
   }
 }
 

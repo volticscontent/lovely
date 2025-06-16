@@ -1,17 +1,27 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import Cookies from 'js-cookie';
-import { debounce, throttle } from '@/utils/performance';
-import Image from 'next/image';
+
+// Função debounce simples
+function debounce(
+  func: (e: KeyboardEvent) => void,
+  wait: number
+): (e: KeyboardEvent) => void {
+  let timeout: NodeJS.Timeout;
+  return (e: KeyboardEvent) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(e), wait);
+  };
+}
 
 export default function BarraNavegacao() {
-  const video0Ref = useRef<HTMLVideoElement>(null);
-  const { user, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const { user, logout } = useAuth();
 
   // Hook para garantir hidratação consistente
   useEffect(() => {
@@ -35,7 +45,7 @@ export default function BarraNavegacao() {
   // Função para fazer logout
   const handleLogout = async () => {
     try {
-      await signOut();
+      await logout();
       closeMobileMenu();
     } catch (error) {
       // Manter apenas erro crítico sem log
@@ -75,100 +85,6 @@ export default function BarraNavegacao() {
   }, [isMobileMenuOpen]);
 
   useEffect(() => {
-    if (!isClient) return;
-    
-    // Detectar se é dispositivo móvel apenas no cliente
-    const isMobile = /iphone|ipad|ipod|android|blackberry|mini|windows\sce|palm/i.test(navigator.userAgent.toLowerCase());
-    
-    // Função para garantir que o vídeo seja reproduzido
-    const playVideo = async () => {
-      if (video0Ref.current) {
-        const video = video0Ref.current;
-        
-        try {
-          // Para dispositivos móveis, usar estratégia mais conservadora
-          if (isMobile) {
-            video.preload = 'none';
-            video.muted = true;
-            video.playsInline = true;
-            video.setAttribute('webkit-playsinline', 'true');
-            
-            // Verificar se o vídeo pode ser carregado
-            const canPlay = await new Promise((resolve) => {
-              const timeout = setTimeout(() => resolve(false), 3000);
-              
-              video.addEventListener('canplaythrough', () => {
-                clearTimeout(timeout);
-                resolve(true);
-              }, { once: true });
-              
-              video.addEventListener('error', () => {
-                clearTimeout(timeout);
-                resolve(false);
-              }, { once: true });
-              
-              video.load();
-            });
-            
-            if (canPlay) {
-              await video.play();
-            } else {
-              // Se falhar, ocultar o vídeo
-              video.style.display = 'none';
-            }
-          } else {
-            // Para desktop, comportamento otimizado
-            video.currentTime = 0;
-            video.muted = true;
-            video.playsInline = true;
-            
-            await video.play();
-          }
-        } catch (err) {
-          // Fallback silencioso para erro de reprodução
-          if (video0Ref.current) {
-            video0Ref.current.style.display = 'none';
-          }
-        }
-      }
-    };
-
-    // Aguardar um pouco antes de tentar reproduzir
-    const timer = setTimeout(playVideo, 500);
-
-    // Adicionar evento para detectar quando o vídeo está pausado (apenas desktop)
-    const handlePause = () => {
-      if (video0Ref.current && !isMobile) {
-        setTimeout(playVideo, 1000);
-      }
-    };
-
-    // Adicionar evento para detectar erros de rede
-    const handleError = (e: Event) => {
-      if (video0Ref.current) {
-        video0Ref.current.style.display = 'none';
-      }
-    };
-
-    if (video0Ref.current) {
-      if (!isMobile) {
-        video0Ref.current.addEventListener('pause', handlePause);
-      }
-      video0Ref.current.addEventListener('error', handleError);
-    }
-    
-    return () => {
-      clearTimeout(timer);
-      // Limpar eventos quando o componente for desmontado
-      if (video0Ref.current) {
-        video0Ref.current.removeEventListener('pause', handlePause);
-        video0Ref.current.removeEventListener('error', handleError);
-      }
-    };
-  }, [isClient]);
-
-  // Debug do estado
-  useEffect(() => {
     // Removido log de debug
   }, [isMobileMenuOpen]);
 
@@ -178,18 +94,11 @@ export default function BarraNavegacao() {
         <div className="container mx-auto px-4 flex justify-between items-center">
           <div className="flex items-center gap-2 pl-0 md:pl-0 py-1 md:py-0">
             <div className="relative h-14 w-14 md:h-14 md:w-16 overflow-visible">
-              <video 
-                ref={video0Ref}
-                preload="metadata"
-                autoPlay={false}
-                loop 
-                muted
-                playsInline
-                webkit-playsinline="true"
-                controls={false}
-                disablePictureInPicture
-                disableRemotePlayback
-                src="/videos/hero/dh.webm" 
+              <Image 
+                src="/images/logo.png" 
+                alt="Lovely Logo"
+                width={64}
+                height={64}
                 className="w-full h-full object-contain scale-125"
                 style={{
                   backgroundColor: 'transparent',
@@ -200,16 +109,7 @@ export default function BarraNavegacao() {
                     e.currentTarget.style.display = 'none';
                   }
                 }}
-                onLoadStart={() => {
-                  // Removido log de debug
-                }}
-                onCanPlay={() => {
-                  // Removido log de debug
-                }}
-              >
-                {/* Fallback para navegadores que não suportam WebM */}
-                <span className="text-white text-xs">Logo</span>
-              </video>
+              />
             </div>
             <div className="text-white font-bold text-3xl md:text-4xl tracking-wide">
               <span className="text-white">Love</span>

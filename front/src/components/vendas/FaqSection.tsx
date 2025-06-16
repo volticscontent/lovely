@@ -45,7 +45,7 @@ const faqs = [
 
 export default function FaqSection() {
   return (
-    <div id="faq" className="py-8 lg:py-32">
+    <section id="faq" className="py-8 lg:py-32 bg-black">
       <div className="container max-w-7xl mx-auto px-12 flex flex-col md:flex-row justify-between gap-8 md:gap-12">
         <div className="w-full md:w-1/2 mb-8 md:mb-0">
           <button className="relative flex border content-center bg-black/20 hover:bg-black/10 transition duration-500 dark:bg-white/20 items-center flex-col flex-nowrap gap-10 h-min justify-center overflow-visible p-px decoration-clone w-fit rounded-full">
@@ -98,6 +98,6 @@ export default function FaqSection() {
           </Accordion.Root>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
